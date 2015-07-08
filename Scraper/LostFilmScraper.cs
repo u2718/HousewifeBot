@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using DAL;
 using HtmlAgilityPack;
-using System.Threading;
 
 namespace Scraper
 {
@@ -25,7 +23,7 @@ namespace Scraper
             {
                 try
                 {
-                    html = m_client.DownloadString(m_url);
+                    html = MClient.DownloadString(MUrl);
                     break;
                 }
                 catch (Exception e)
@@ -48,8 +46,6 @@ namespace Scraper
 
         private List<Show> Parse(string html)
         {
-            List<Show> result = new List<Show>();
-
             HtmlDocument doc = new HtmlDocument();
             try
             {
@@ -61,7 +57,25 @@ namespace Scraper
                 return null;
             }
 
-            var series = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//span");
+            var showTitle = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
+                .ToArray();
+
+            var seriesTitle = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
+                //span[@class='torrent_title']//b")
+                .ToArray();
+
+
+            List<Show> result = new List<Show>();
+            for (int i = 0; i < showTitle.Length; i++)
+            {
+                List<Series> seriesList = new List<Series> {new Series {Title = seriesTitle[i].InnerText.Trim()}};
+
+                result.Add(new Show
+                {
+                    Title = showTitle[i].Attributes["title"].Value.Trim(),
+                    SeriesList = new List<Series>(seriesList)
+                });
+            }
 
             return result;
         }

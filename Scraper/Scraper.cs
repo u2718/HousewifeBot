@@ -1,25 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DAL;
+﻿using System.Collections.Generic;
 using System.Net;
+using DAL;
 
 namespace Scraper
 {
     abstract class Scraper
     {
-        protected long m_lastId = 0;
-        protected WebClient m_client = new WebClient();
-        protected string m_url = String.Empty;
+        protected long MLastId;
+        protected WebClient MClient = new WebClient();
+        protected string MUrl;
 
         public int RetryCount { get; private set; }
 
-        public Scraper(string url, long lastId)
+        protected Scraper(string url, long lastId)
         {
-            m_url = url;
-            m_lastId = lastId;
+            MUrl = url;
+            MLastId = lastId;
             RetryCount = 3;
         }
 
