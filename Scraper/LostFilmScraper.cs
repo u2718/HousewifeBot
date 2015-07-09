@@ -10,6 +10,9 @@ namespace Scraper
 {
     class LostFilmScraper : Scraper
     {
+        private readonly Regex _dateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
+        private readonly Regex _idRegex = new Regex(@"id=(\d+)");
+
         public LostFilmScraper(string url, long lastId) : base(url, lastId)
         {
 
@@ -38,14 +41,14 @@ namespace Scraper
             {
                 return result;
             }
-
-            result = Parse(html);
+            
+            result = Parse(html).Select(i => i.Value).ToList(); 
 
             return result;
         }
 
 
-        private List<Show> Parse(string html)
+        private Dictionary<string, Show> Parse(string html)
         {
             HtmlDocument doc = new HtmlDocument();
             try
@@ -58,34 +61,39 @@ namespace Scraper
                 return null;
             }
 
-            var showTitle = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
+            var showTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
+                .Select(s => s?.Attributes["title"]?.Value?.Trim())
                 .ToArray();
 
-            var seriesTitle = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
+            var seriesTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //span[@class='torrent_title']//b")
+                .Select(s => s?.InnerText?.Trim())
                 .ToArray();
 
-            Regex dateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
+            var seriesIds = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
+                //a[@class='a_details']").
+                Select(
+                    s => s?.Attributes["href"] != null ?
+                    _idRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
+                    null
+                ).ToArray();
 
-            var dates = dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
+            var dates = _dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
                         //div[@class='content_body']").First().InnerHtml);
 
-            List<Show> result = new List<Show>();
-            for (int i = 0; i < showTitle.Length; i++)
+            Dictionary<string, Show> result = new Dictionary<string, Show>();
+
+            for (int i = 0; i < showTitles.Length; i++)
             {
-                string title = showTitle[i].Attributes["title"].Value.Trim();
-                if (result.Count(s => s.Title == title) == 0)
+                if (!result.ContainsKey(showTitles[i]))
                 {
-                    result.Add(new Show
-                    {
-                        Title = title
-                    });
+                    result.Add(showTitles[i], new Show { Title = showTitles[i] });
                 }
-                
-                result.First(s => s.Title == title).SeriesList.Add(
+                result[showTitles[i]].SeriesList.Add(
                     new Series
                     {
-                        Title = seriesTitle[i].InnerText.Trim(),
+                        SiteId = int.Parse(seriesIds[i]),
+                        Title = seriesTitles[i],
                         Date = DateTime.Parse(dates[i].Groups[1].Value)
                     }
                 );
