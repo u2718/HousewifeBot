@@ -11,7 +11,7 @@ namespace Scraper
     {
         static void Main(string[] args)
         {
-            Scraper s = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", 0);
+            Scraper s = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", 14468);
             List<Show> shows = s.Load();
 
             foreach (var show in shows)

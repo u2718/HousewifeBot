@@ -18,16 +18,16 @@ namespace Scraper
 
         }
 
-        public override List<Show> Load()
+        protected override bool LoadPage(string url, out Dictionary<string, Show> shows)
         {
-            List<Show> result = new List<Show>();
+            Dictionary<string, Show> result = new Dictionary<string, Show>();
 
             string html = String.Empty;
             for (int i = 0; i < RetryCount; i++)
             {
                 try
                 {
-                    html = MClient.DownloadString(MUrl);
+                    html = MClient.DownloadString(url);
                     break;
                 }
                 catch (Exception e)
@@ -39,16 +39,18 @@ namespace Scraper
 
             if (String.IsNullOrEmpty(html))
             {
-                return result;
+                shows = result;
             }
-            
-            result = Parse(html).Select(i => i.Value).ToList(); 
 
-            return result;
+            return Parse(html, out shows);
         }
 
+        protected override string GetPageUrlByNumber(int pageNumber)
+        {
+            return MUrl + $"?o={pageNumber*15}";
+        }
 
-        private Dictionary<string, Show> Parse(string html)
+        private bool Parse(string html, out Dictionary<string, Show> result)
         {
             HtmlDocument doc = new HtmlDocument();
             try
@@ -58,7 +60,8 @@ namespace Scraper
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                return null;
+                result = new Dictionary<string, Show>();
+                return false;
             }
 
             var showTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
@@ -86,15 +89,10 @@ namespace Scraper
             var dates = _dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
                         //div[@class='content_body']").First().InnerHtml);
 
-            Dictionary<string, Show> result = new Dictionary<string, Show>();
-
+            Dictionary<string, Show> showDictionary = new Dictionary<string, Show>();
+            bool stop = false;
             for (int i = 0; i < showTitles.Length; i++)
             {
-                if (!result.ContainsKey(showTitles[i]))
-                {
-                    result.Add(showTitles[i], new Show { Title = showTitles[i] });
-                }
-
                 int seriesId = -1;
                 try
                 {
@@ -106,10 +104,21 @@ namespace Scraper
                     continue;
                 }
 
-                DateTime tempDateTime;
-                DateTime? date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? tempDateTime : (DateTime?)null; 
+                if (seriesId == MLastId)
+                {
+                    stop = true;
+                    break;
+                }
 
-                result[showTitles[i]].SeriesList.Add(
+                DateTime tempDateTime;
+                DateTime? date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? tempDateTime : (DateTime?)null;
+
+                if (!showDictionary.ContainsKey(showTitles[i]))
+                {
+                    showDictionary.Add(showTitles[i], new Show { Title = showTitles[i] });
+                }
+
+                showDictionary[showTitles[i]].SeriesList.Add(
                     new Series
                     {
                         SiteId = seriesId,
@@ -119,7 +128,8 @@ namespace Scraper
                 );
             }
 
-            return result;
+            result = showDictionary;
+            return stop;
         }
     }
 }
