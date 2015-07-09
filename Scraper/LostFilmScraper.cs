@@ -64,17 +64,21 @@ namespace Scraper
                 //span[@class='torrent_title']//b")
                 .ToArray();
 
-
             List<Show> result = new List<Show>();
             for (int i = 0; i < showTitle.Length; i++)
             {
-                List<Series> seriesList = new List<Series> {new Series {Title = seriesTitle[i].InnerText.Trim()}};
-
-                result.Add(new Show
+                string title = showTitle[i].Attributes["title"].Value.Trim();
+                if (result.Count(s => s.Title == title) == 0)
                 {
-                    Title = showTitle[i].Attributes["title"].Value.Trim(),
-                    SeriesList = new List<Series>(seriesList)
-                });
+                    result.Add(new Show
+                    {
+                        Title = title
+                    });
+                }
+
+                result.First(s => s.Title == title).SeriesList.Add(
+                    new Series { Title = seriesTitle[i].InnerText.Trim() }
+                );
             }
 
             return result;
