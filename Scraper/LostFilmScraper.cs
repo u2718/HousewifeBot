@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using DAL;
 using HtmlAgilityPack;
@@ -64,6 +65,11 @@ namespace Scraper
                 //span[@class='torrent_title']//b")
                 .ToArray();
 
+            Regex dateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
+
+            var dates = dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
+                        //div[@class='content_body']").First().InnerHtml);
+
             List<Show> result = new List<Show>();
             for (int i = 0; i < showTitle.Length; i++)
             {
@@ -75,9 +81,13 @@ namespace Scraper
                         Title = title
                     });
                 }
-
+                
                 result.First(s => s.Title == title).SeriesList.Add(
-                    new Series { Title = seriesTitle[i].InnerText.Trim() }
+                    new Series
+                    {
+                        Title = seriesTitle[i].InnerText.Trim(),
+                        Date = DateTime.Parse(dates[i].Groups[1].Value)
+                    }
                 );
             }
 
