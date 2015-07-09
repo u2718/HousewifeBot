@@ -6,6 +6,6 @@ namespace DAL
     {
         public int SiteId { get; set; }
         public String Title { get; set; }
-        public DateTime Date { get; set; }
+        public DateTime? Date { get; set; }
     }
 }

@@ -78,6 +78,11 @@ namespace Scraper
                     null
                 ).ToArray();
 
+            if (showTitles == null || seriesTitles == null || seriesIds == null)
+            {
+                throw new Exception("Error while parsing web page");
+            }
+
             var dates = _dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
                         //div[@class='content_body']").First().InnerHtml);
 
@@ -89,12 +94,27 @@ namespace Scraper
                 {
                     result.Add(showTitles[i], new Show { Title = showTitles[i] });
                 }
+
+                int seriesId = -1;
+                try
+                {
+                    seriesId = int.Parse(seriesIds[i]);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    continue;
+                }
+
+                DateTime tempDateTime;
+                DateTime? date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? tempDateTime : (DateTime?)null; 
+
                 result[showTitles[i]].SeriesList.Add(
                     new Series
                     {
-                        SiteId = int.Parse(seriesIds[i]),
+                        SiteId = seriesId,
                         Title = seriesTitles[i],
-                        Date = DateTime.Parse(dates[i].Groups[1].Value)
+                        Date = date
                     }
                 );
             }
