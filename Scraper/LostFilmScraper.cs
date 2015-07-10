@@ -52,6 +52,11 @@ namespace Scraper
 
         private bool Parse(string html, out Dictionary<string, Show> result)
         {
+            if (html == null)
+            {
+                throw new ArgumentNullException(nameof(html));
+            }
+
             HtmlDocument doc = new HtmlDocument();
             try
             {
@@ -65,29 +70,30 @@ namespace Scraper
             }
 
             var showTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
-                .Select(s => s?.Attributes["title"]?.Value?.Trim())
-                .ToArray();
+                ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
+                ?.ToArray();
 
             var seriesTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //span[@class='torrent_title']//b")
-                .Select(s => s?.InnerText?.Trim())
-                .ToArray();
+                ?.Select(s => s?.InnerText?.Trim())
+                ?.ToArray();
 
             var seriesIds = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
-                //a[@class='a_details']").
-                Select(
+                //a[@class='a_details']")
+                ?.Select(
                     s => s?.Attributes["href"] != null ?
                     _idRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
-                    null
-                ).ToArray();
+                    null)
+                ?.ToArray();
 
             if (showTitles == null || seriesTitles == null || seriesIds == null)
             {
-                throw new Exception("Error while parsing web page");
+                throw new ArgumentException("Invalid web page", nameof(html));
             }
 
-            var dates = _dateRegex.Matches(doc.DocumentNode.SelectNodes(@"//div[@class='mid']
-                        //div[@class='content_body']").First().InnerHtml);
+            var dateList = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']")
+                ?.First()?.InnerHtml;
+            var dates = dateList != null ? _dateRegex.Matches(dateList) : null;
 
             Dictionary<string, Show> showDictionary = new Dictionary<string, Show>();
             bool stop = false;
@@ -110,8 +116,13 @@ namespace Scraper
                     break;
                 }
 
-                DateTime tempDateTime;
-                DateTime? date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? tempDateTime : (DateTime?)null;
+                DateTime? date = null;
+                if (dates != null)
+                {
+                    DateTime tempDateTime;
+                    date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? 
+                        tempDateTime : (DateTime?)null;
+                }
 
                 if (!showDictionary.ContainsKey(showTitles[i]))
                 {
