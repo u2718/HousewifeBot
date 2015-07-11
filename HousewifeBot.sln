@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scraper", "Scraper\Scraper.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAL", "DAL\DAL.csproj", "{7F43E0E2-E657-47CA-9985-01E2BB6425D3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telegram", "Telegram\Telegram.csproj", "{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{7F43E0E2-E657-47CA-9985-01E2BB6425D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F43E0E2-E657-47CA-9985-01E2BB6425D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F43E0E2-E657-47CA-9985-01E2BB6425D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
