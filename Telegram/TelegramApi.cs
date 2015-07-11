@@ -78,7 +78,7 @@ namespace Telegram
                         new NameValueCollection(),
                         (nameValueCollection, p) =>
                         {
-                            nameValueCollection.Add(p.Key, p.Value.ToString());
+                            nameValueCollection.Add(p.Key, Uri.EscapeDataString(p.Value.ToString()));
                             return nameValueCollection;
                         }
                         )
