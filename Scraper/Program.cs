@@ -1,28 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DAL;
 
 namespace Scraper
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            Scraper s = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", 14468);
-            List<Show> shows = s.Load();
-
-            foreach (var show in shows)
+            using (var db = new AppDbContext())
             {
-                Console.WriteLine(show.Title);
-                foreach (var series in show.SeriesList)
+                int lastId = db.Series?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
+
+                Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", lastId);
+                List<Show> shows = scraper.Load();
+
+                db.Shows.AddRange(shows);
+
+                foreach (var show in shows)
                 {
-                    Console.WriteLine('\t' + series.Title);
+                    Console.WriteLine(show.Title);
+                    foreach (var series in show.SeriesList)
+                    {
+                        Console.WriteLine('\t' + series.Title);
+                    }
                 }
+
+                db.SaveChanges();
             }
-            Console.ReadKey();
         }
     }
 }
