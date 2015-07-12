@@ -13,7 +13,8 @@ namespace Scraper
             {
                 int lastId = db.Series?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
 
-                Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", lastId);
+                Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
+                    @"http://www.lostfilm.tv/serials.php", lastId);
                 List<Show> shows = scraper.Load();
 
                 db.Shows.AddRange(shows);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using DAL;
@@ -10,14 +11,16 @@ namespace Scraper
         protected long MLastId;
         protected WebClient MClient = new WebClient();
         protected string MUrl;
+        protected string MShowsListUrl;
 
         public int RetryCount { get; private set; }
 
-        protected Scraper(string url, long lastId)
+        protected Scraper(string url, string showsListUrl, long lastId)
         {
             MUrl = url;
             MLastId = lastId;
             RetryCount = 3;
+            MShowsListUrl = showsListUrl;
         }
 
         public List<Show> Load()
@@ -50,6 +53,8 @@ namespace Scraper
 
             return showDictionary.Select(s => s.Value).ToList();
         }
+
+        public abstract List<Tuple<string, string>> LoadShows(); 
 
         protected abstract bool LoadPage(string url, out Dictionary<string, Show> shows);
         protected abstract string GetPageUrlByNumber(int pageNumber);

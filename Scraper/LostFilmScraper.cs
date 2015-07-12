@@ -13,17 +13,41 @@ namespace Scraper
         private readonly Regex _dateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
         private readonly Regex _idRegex = new Regex(@"id=(\d+)");
 
-        public LostFilmScraper(string url, long lastId) : base(url, lastId)
+        public LostFilmScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
 
         }
 
+        public override List<Tuple<string, string>> LoadShows()
+        {
+            HtmlDocument doc = DownloadDocument(MShowsListUrl);
+            var showNodes = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='bb']//a[@class='bb_a']");
+
+            Regex ruTitleRegex = new Regex(@"(.*)<br>");
+            Regex engTitleRegex = new Regex(@"\((.*)\)");
+            return showNodes.Select(n =>
+                new Tuple<string, string>
+                    (
+                    ruTitleRegex.Match(n.InnerHtml).Groups[1].Value,
+                    engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value
+                    )
+                ).ToList();
+        }
+
         protected override bool LoadPage(string url, out Dictionary<string, Show> shows)
         {
-            Dictionary<string, Show> result = new Dictionary<string, Show>();
+            return Parse(DownloadDocument(url), out shows);
+        }
 
-            string html = String.Empty;
-            for (int i = 0; i < RetryCount; i++)
+        protected override string GetPageUrlByNumber(int pageNumber)
+        {
+            return MUrl + $"?o={pageNumber*15}";
+        }
+
+        private HtmlDocument DownloadDocument(string url)
+        {
+            string html = string.Empty;
+            for (int i = 0; i <= RetryCount; i++)
             {
                 try
                 {
@@ -33,28 +57,13 @@ namespace Scraper
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
+
+                    if (i == RetryCount)
+                    {
+                        throw;
+                    }
                     Thread.Sleep(1000);
                 }
-            }
-
-            if (String.IsNullOrEmpty(html))
-            {
-                shows = result;
-            }
-
-            return Parse(html, out shows);
-        }
-
-        protected override string GetPageUrlByNumber(int pageNumber)
-        {
-            return MUrl + $"?o={pageNumber*15}";
-        }
-
-        private bool Parse(string html, out Dictionary<string, Show> result)
-        {
-            if (html == null)
-            {
-                throw new ArgumentNullException(nameof(html));
             }
 
             HtmlDocument doc = new HtmlDocument();
@@ -65,20 +74,28 @@ namespace Scraper
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                result = new Dictionary<string, Show>();
-                return false;
+                throw;
+            }
+            return doc;
+        }
+
+        private bool Parse(HtmlDocument document, out Dictionary<string, Show> result)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
             }
 
-            var showTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
+            var showTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
                 ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
                 ?.ToArray();
 
-            var seriesTitles = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
+            var seriesTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //span[@class='torrent_title']//b")
                 ?.Select(s => s?.InnerText?.Trim())
                 ?.ToArray();
 
-            var seriesIds = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
+            var seriesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //a[@class='a_details']")
                 ?.Select(
                     s => s?.Attributes["href"] != null ?
@@ -88,10 +105,10 @@ namespace Scraper
 
             if (showTitles == null || seriesTitles == null || seriesIds == null)
             {
-                throw new ArgumentException("Invalid web page", nameof(html));
+                throw new ArgumentException("Invalid web page", nameof(document));
             }
 
-            var dateList = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']")
+            var dateList = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']")
                 ?.First()?.InnerHtml;
             var dates = dateList != null ? _dateRegex.Matches(dateList) : null;
 
