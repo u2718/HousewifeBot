@@ -12,16 +12,23 @@ namespace Scraper
             using (var db = new AppDbContext())
             {
                 int lastId = db.Series?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
-                var a = db.Shows.ToArray();
 
                 Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
                     @"http://www.lostfilm.tv/serials.php", lastId);
                 List<Show> shows = scraper.Load();
 
-                db.Shows.AddRange(shows);
-
                 foreach (var show in shows)
                 {
+                    if (db.Shows.Any(s => s.Title == show.Title))
+                    {
+                        db.Shows.First(s => s.Title == show.Title)
+                            .SeriesList.AddRange(show.SeriesList);
+                    }
+                    else
+                    {
+                        db.Shows.Add(show);
+                    }
+
                     Console.WriteLine(show.Title);
                     foreach (var series in show.SeriesList)
                     {
