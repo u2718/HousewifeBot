@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
 using Newtonsoft.Json;
 
 namespace Telegram
@@ -13,8 +17,9 @@ namespace Telegram
         private const string BotUrl = @"https://api.telegram.org/bot{0}/{1}";
 
         private readonly string _token;
-        private readonly WebClient _webClient = new WebClient();
+        private readonly HttpClient _httpClient = new HttpClient();
         private int _retryCount;
+        private Task _pollingTask;
 
         public int RetryCount
         {
@@ -23,6 +28,8 @@ namespace Telegram
         }
 
         public int Offset { get; private set; }
+
+        public ConcurrentDictionary<User, ConcurrentQueue<Message>> Updates { get; set; }
 
         public TelegramApi(string token, int offset = 0)
         {
@@ -34,6 +41,7 @@ namespace Telegram
             _token = token;
             RetryCount = 1;
             Offset = offset;
+            Updates = new ConcurrentDictionary<User, ConcurrentQueue<Message>>();
         }
 
         public User GetMe()
@@ -41,7 +49,7 @@ namespace Telegram
             return ExecuteMethod<User>("GetMe");
         }
 
-        public IEnumerable<Update> GetUpdates()
+        protected IEnumerable<Update> GetUpdates()
         {
             IEnumerable<Update> updates = ExecuteMethod<List<Update>>("getUpdates",
                 new Dictionary<string, object>()
@@ -49,13 +57,37 @@ namespace Telegram
                     {"offset", Offset}
                 });
 
-
             Offset = updates.Any() ? updates.Last().UpdateId + 1 : Offset;
             return updates;
         }
 
-        public Message SendMessage(int chatId, string text)
+        public void StartPolling()
         {
+            if (_pollingTask != null)
+            {
+                return;
+            }
+
+            _pollingTask = Task.Run(() =>
+            {
+                while (true)
+                {
+                    var updates = GetUpdates();
+                    foreach (var update in updates)
+                    {
+                        if (!Updates.ContainsKey(update.Message.From))
+                        {
+                            Updates.GetOrAdd(update.Message.From, new ConcurrentQueue<Message>());
+                        }
+                        Updates[update.Message.From].Enqueue(update.Message);
+                    }
+                    Thread.Sleep(200);
+                }
+            });
+        }
+
+        public  Message SendMessage(int chatId, string text)
+        { 
             return ExecuteMethod<Message>("sendMessage",
                 new Dictionary<string, object>()
                 {
@@ -71,26 +103,23 @@ namespace Telegram
                 throw new ArgumentNullException(nameof(method));
             }
 
+            string url = string.Format(BotUrl, _token, method);
             if (parameters != null)
             {
-                _webClient.QueryString.Add(
-                    parameters.Aggregate(
-                        new NameValueCollection(),
-                        (nameValueCollection, p) =>
-                        {
-                            nameValueCollection.Add(p.Key, Uri.EscapeDataString(p.Value.ToString()));
-                            return nameValueCollection;
-                        }
-                        )
-                    );
-            }
+                var parametersArray = parameters
+                    .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value.ToString())}&").ToArray();
 
+                url += $"?{string.Join("&", parametersArray)}";
+            }
+            
             string response = string.Empty;
             for (int i = 0; i <= RetryCount; i++)
             {
                 try
                 {
-                    response = _webClient.DownloadString(string.Format(BotUrl, _token, method));
+                    var r = _httpClient.GetStringAsync(url);
+                    r.Wait();
+                    response = Uri.UnescapeDataString(r.Result);
                     break;
                 }
                 catch (Exception e)
@@ -102,10 +131,6 @@ namespace Telegram
                     {
                         throw;
                     }
-                }
-                finally
-                {
-                    _webClient.QueryString.Clear();
                 }
             }
 

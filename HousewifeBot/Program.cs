@@ -11,15 +11,40 @@ namespace HousewifeBot
         {
             var token = File.ReadAllText(@"token.txt");
             TelegramApi tg = new TelegramApi(token);
-            User botUser = tg.GetMe();
+            var botUser = tg.GetMe();
+            tg.StartPolling();
 
             while (true)
             {
-                foreach (var update in tg.GetUpdates())
+                foreach (var update in tg.Updates)
                 {
-                    tg.SendMessage(update.Message.From.Id, "Test");
+                    Command command = null;
+                    if (update.Value.Count == 0)
+                    {
+                        continue;
+                    }
+                    Message message = null;
+                    update.Value.TryDequeue(out message);
+                    try
+                    {
+                        command = Command.CreateCommand(message.Text);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        continue;
+                    }
+                    command.TelegramApi = tg;
+                    command.Message = message;
+                    try
+                    {
+                        command.Execute();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
-                Thread.Sleep(200);
             }
         }
     }

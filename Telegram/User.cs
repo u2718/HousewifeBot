@@ -5,6 +5,16 @@ namespace Telegram
     [JsonObject(MemberSerialization.OptIn)]
     public class User
     {
+        protected bool Equals(User other)
+        {
+            return Id == other.Id;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id;
+        }
+
         [JsonProperty(PropertyName = "id")]
         public int Id { get; set; }
 
@@ -16,5 +26,13 @@ namespace Telegram
 
         [JsonProperty(PropertyName = "username")]
         public string Username { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((User) obj);
+        }
     }
 }

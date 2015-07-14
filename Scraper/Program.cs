@@ -12,6 +12,7 @@ namespace Scraper
             using (var db = new AppDbContext())
             {
                 int lastId = db.Series?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
+                var a = db.Shows.ToArray();
 
                 Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
                     @"http://www.lostfilm.tv/serials.php", lastId);
