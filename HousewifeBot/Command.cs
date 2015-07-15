@@ -25,9 +25,12 @@ namespace HousewifeBot
 
         public static Command CreateCommand(string command)
         {
-            switch (command)
+            switch (command.ToLower())
             {
-                case @"/serials": return new SerialsCommand();
+                case @"/serials":
+                    return new SerialsCommand();
+                case @"/subscribe":
+                    return new SubscribeCommand();
                 default:
                     return new UnknownCommand();
             }

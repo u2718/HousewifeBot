@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using DAL;
 using Telegram;
 
@@ -21,57 +19,59 @@ namespace HousewifeBot
 
         public override bool Execute()
         {
+            int pageSize = 10;
+            List<string> serials;
             using (var db = new AppDbContext())
             {
-                int pageSize = 10;
-                var serials = db.Shows.Select(s => s.Title).ToList();
+                serials = db.Shows.Select(s => s.Title).ToList();
+            }
 
-                List<string> pagesList = new List<string>();
-                for (int i = 0; i < serials.Count; i += pageSize)
+            List<string> pagesList = new List<string>();
+            for (int i = 0; i < serials.Count; i += pageSize)
+            {
+                if (i > serials.Count)
                 {
-                    if (i > serials.Count)
-                    {
-                        break;
-                    }
-
-                    int count = Math.Min(serials.Count - i, pageSize);
-                    pagesList.Add(
-                        serials.GetRange(i, count)
-                        .Aggregate("", (s, s1) => s + "\n" + s1)
-                        );
+                    break;
                 }
 
-                for (int i = 0; i < pagesList.Count; i++)
+                int count = Math.Min(serials.Count - i, pageSize);
+                pagesList.Add(
+                    serials.GetRange(i, count)
+                    .Aggregate("", (s, s1) => s + "\n" + s1)
+                    );
+            }
+
+            for (int i = 0; i < pagesList.Count; i++)
+            {
+                string page = pagesList[i];
+
+                if (i != pagesList.Count - 1)
                 {
-                    string page = pagesList[i];
+                    page += "\n/next or /stop";
+                }
+                TelegramApi.SendMessage(Message.From.Id, page);
 
-                    if (i != pagesList.Count - 1)
-                    {
-                        page +=  "\n/next or /stop";
-                    }
-                    TelegramApi.SendMessage(Message.From.Id, page);
-
-                    Message message;
+                Message message;
+                do
+                {
                     do
                     {
-                        do
-                        {
-                            Thread.Sleep(200);
-                        } while (TelegramApi.Updates[Message.From].IsEmpty);
+                        Thread.Sleep(200);
+                    } while (TelegramApi.Updates[Message.From].IsEmpty);
 
-                        TelegramApi.Updates[Message.From].TryDequeue(out message);
-                        if (message?.Text != "/stop" && message?.Text != "/next")
-                        {
-                            TelegramApi.SendMessage(Message.From.Id, "\n/next or /stop");
-                        }
-                    } while (message?.Text != "/stop" && message?.Text != "/next");
-
-                    if (message.Text == "/stop")
+                    TelegramApi.Updates[Message.From].TryDequeue(out message);
+                    if (message?.Text != "/stop" && message?.Text != "/next")
                     {
-                        break;
+                        TelegramApi.SendMessage(Message.From.Id, "\n/next or /stop");
                     }
+                } while (message?.Text != "/stop" && message?.Text != "/next");
+
+                if (message.Text == "/stop")
+                {
+                    break;
                 }
             }
+
             return true;
         }
     }
