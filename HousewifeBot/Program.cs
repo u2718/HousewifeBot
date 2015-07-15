@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Telegram;
 
 namespace HousewifeBot
@@ -13,6 +14,31 @@ namespace HousewifeBot
             TelegramApi tg = new TelegramApi(token);
             var botUser = tg.GetMe();
             tg.StartPolling();
+
+            Notifier notifier = new Notifier(tg);
+            var updateNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.UpdateNotifications();
+                        Thread.Sleep(5000);
+                    }
+                }
+                );
+            updateNotificationsTask.Start();
+
+            var sendNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.SendNotifications();
+                        Thread.Sleep(10000);
+                    }
+                }
+                );
+            sendNotificationsTask.Start();
 
             while (true)
             {
@@ -45,6 +71,7 @@ namespace HousewifeBot
                         Console.WriteLine(e.Message);
                     }
                 }
+                Thread.Sleep(200);
             }
         }
     }
