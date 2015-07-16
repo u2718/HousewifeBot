@@ -20,7 +20,7 @@ namespace Scraper
 
         public override List<Tuple<string, string>> LoadShows()
         {
-            HtmlDocument doc = DownloadDocument(MShowsListUrl);
+            HtmlDocument doc = DownloadDocument(ShowsListUrl);
             var showNodes = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='bb']//a[@class='bb_a']");
 
             Regex ruTitleRegex = new Regex(@"(.*)<br>");
@@ -41,7 +41,7 @@ namespace Scraper
 
         protected override string GetPageUrlByNumber(int pageNumber)
         {
-            return MUrl + $"?o={pageNumber*15}";
+            return Url + $"?o={pageNumber*15}";
         }
 
         private HtmlDocument DownloadDocument(string url)
@@ -51,7 +51,7 @@ namespace Scraper
             {
                 try
                 {
-                    html = MClient.DownloadString(url);
+                    html = Client.DownloadString(url);
                     break;
                 }
                 catch (Exception e)
@@ -127,7 +127,7 @@ namespace Scraper
                     continue;
                 }
 
-                if (seriesId == MLastId)
+                if (seriesId == LastId)
                 {
                     stop = true;
                     break;

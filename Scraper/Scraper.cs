@@ -8,19 +8,19 @@ namespace Scraper
 {
     abstract class Scraper
     {
-        protected long MLastId;
-        protected WebClient MClient = new WebClient();
-        protected string MUrl;
-        protected string MShowsListUrl;
+        protected long LastId;
+        protected WebClient Client = new WebClient();
+        protected string Url;
+        protected string ShowsListUrl;
 
         public int RetryCount { get; private set; }
 
         protected Scraper(string url, string showsListUrl, long lastId)
         {
-            MUrl = url;
-            MLastId = lastId;
+            Url = url;
+            LastId = lastId;
             RetryCount = 3;
-            MShowsListUrl = showsListUrl;
+            ShowsListUrl = showsListUrl;
         }
 
         public List<Show> Load()
@@ -51,10 +51,22 @@ namespace Scraper
                 pageNumber++;
             } while (!stop);
 
-            return showDictionary.Select(s => s.Value).ToList();
+            List<Show> result = showDictionary.Select(s => s.Value).ToList();
+            if (result.Count != 0)
+            {
+                LastId = result.Aggregate(
+                    new List<Series>(),
+                    (list, show) =>
+                    {
+                        list.AddRange(show.SeriesList);
+                        return list;
+                    }
+                    ).OrderByDescending(s => s.SiteId).First().SiteId;
+            }
+            return result;
         }
 
-        public abstract List<Tuple<string, string>> LoadShows(); 
+        public abstract List<Tuple<string, string>> LoadShows();
 
         protected abstract bool LoadPage(string url, out Dictionary<string, Show> shows);
         protected abstract string GetPageUrlByNumber(int pageNumber);

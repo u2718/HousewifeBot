@@ -24,7 +24,8 @@ namespace HousewifeBot
             string response;
             using (AppDbContext db = new AppDbContext())
             {
-                Show show = db.Shows.FirstOrDefault(s => s.Title.ToLower() == serialTitle.ToLower());
+                Show show = db.Shows.FirstOrDefault(s => s.Title.ToLower() == serialTitle.ToLower() ||
+                                                         s.OriginalTitle.ToLower() == serialTitle.ToLower());
                 if (show != null)
                 {
                     User user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);

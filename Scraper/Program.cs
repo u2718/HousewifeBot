@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using DAL;
 
 namespace Scraper
@@ -15,28 +16,48 @@ namespace Scraper
 
                 Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
                     @"http://www.lostfilm.tv/serials.php", lastId);
-                List<Show> shows = scraper.Load();
 
-                foreach (var show in shows)
+                foreach (var show in scraper.LoadShows())
                 {
-                    if (db.Shows.Any(s => s.Title == show.Title))
+                    if (db.Shows.Any(s => s.Title == show.Item1))
                     {
-                        db.Shows.First(s => s.Title == show.Title)
-                            .SeriesList.AddRange(show.SeriesList);
+                        db.Shows.First(s => s.Title == show.Item1).OriginalTitle = show.Item2;
                     }
                     else
                     {
-                        db.Shows.Add(show);
-                    }
-
-                    Console.WriteLine(show.Title);
-                    foreach (var series in show.SeriesList)
-                    {
-                        Console.WriteLine('\t' + series.Title);
+                        db.Shows.Add(new Show
+                        {
+                            Title = show.Item1,
+                            OriginalTitle = show.Item2
+                        });
                     }
                 }
-
                 db.SaveChanges();
+                while (true)
+                {
+                    List<Show> shows = scraper.Load();
+
+                    foreach (var show in shows)
+                    {
+                        if (db.Shows.Any(s => s.Title == show.Title))
+                        {
+                            db.Shows.First(s => s.Title == show.Title)
+                                .SeriesList.AddRange(show.SeriesList);
+                        }
+                        else
+                        {
+                            db.Shows.Add(show);
+                        }
+
+                        Console.WriteLine(show.Title);
+                        foreach (var series in show.SeriesList)
+                        {
+                            Console.WriteLine('\t' + series.Title);
+                        }
+                    }
+                    db.SaveChanges();
+                    Thread.Sleep(TimeSpan.FromMinutes(10));
+                }
             }
         }
     }

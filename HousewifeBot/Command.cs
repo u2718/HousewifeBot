@@ -31,6 +31,8 @@ namespace HousewifeBot
                     return new SerialsCommand();
                 case @"/subscribe":
                     return new SubscribeCommand();
+                case @"/subscribe_all":
+                    return new SubscribeAllCommand();
                 default:
                     return new UnknownCommand();
             }
