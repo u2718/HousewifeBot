@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DAL;
 using Telegram;
+using User = DAL.User;
 
 namespace HousewifeBot
 {
     public class Notifier
     {
-
         public TelegramApi TelegramApi { get; set; }
 
         public Notifier(TelegramApi telegramApi)
@@ -60,9 +57,9 @@ namespace HousewifeBot
                     return;
                 }
 
-                Dictionary<DAL.User, List<Notification>> notificationDictionary =
+                Dictionary<User, List<Notification>> notificationDictionary =
                     notifications.Aggregate(
-                    new Dictionary<DAL.User, List<Notification>>(),
+                    new Dictionary<User, List<Notification>>(),
                     (d, n) =>
                     {
                         if (d.ContainsKey(n.Subscription.User))

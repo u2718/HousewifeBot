@@ -59,6 +59,7 @@
     <Compile Include="SubscribeAllCommand.cs" />
     <Compile Include="SubscribeCommand.cs" />
     <Compile Include="UnknownCommand.cs" />
+    <Compile Include="UnsubscribeCommand.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
