@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DAL;
 
 namespace HousewifeBot
@@ -49,7 +46,7 @@ namespace HousewifeBot
 
                 db.SaveChanges();
             }
-            TelegramApi.SendMessage(Message.From.Id, "Вы, братишка, подписаны на все сериалы");
+            TelegramApi.SendMessage(Message.From, "Вы, братишка, подписаны на все сериалы");
             return true;
         }
     }

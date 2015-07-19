@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Newtonsoft.Json;
 
 namespace Telegram
@@ -86,7 +83,7 @@ namespace Telegram
             });
         }
 
-        public  Message SendMessage(int chatId, string text)
+        public Message SendMessage(int chatId, string text)
         { 
             return ExecuteMethod<Message>("sendMessage",
                 new Dictionary<string, object>()
@@ -94,6 +91,22 @@ namespace Telegram
                     {"chat_id", chatId},
                     {"text", text}
                 });
+        }
+
+        public Message SendMessage(User user, string text)
+        {
+            return SendMessage(user.Id, text);
+        }
+
+        public Message WaitForMessage(User user)
+        {
+            do
+            {
+                Thread.Sleep(200);
+            } while (!Updates.ContainsKey(user) || Updates[user].IsEmpty);
+            Message message;
+            Updates[user].TryDequeue(out message);
+            return message;
         }
 
         private T ExecuteMethod<T>(string method, Dictionary<string, object> parameters = null) where T : new()

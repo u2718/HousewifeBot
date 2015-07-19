@@ -11,14 +11,7 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-
-            do
-            {
-                Thread.Sleep(200);
-            } while (TelegramApi.Updates[Message.From].IsEmpty);
-
-            Message message;
-            TelegramApi.Updates[Message.From].TryDequeue(out message);
+            Message message = TelegramApi.WaitForMessage(Message.From);
             string serialTitle = message.Text;
 
             string response;
@@ -44,7 +37,7 @@ namespace HousewifeBot
 
                     if (user.Subscriptions.Any(s => s.Show.Id == show.Id))
                     {
-                        response = $"You're already subscribed to '{show.Title}'";
+                        response = $"Вы уже подписаны на сериал '{show.Title}'";
                     }
                     else
                     {
@@ -64,17 +57,17 @@ namespace HousewifeBot
                         {
                             db.Subscriptions.Add(subscription);
                         }
-                        response = $"You're subscribed to '{show.Title}'";
+                        response = $"Вы подписались на сериал '{show.Title}'";
                     }
                 }
                 else
                 {
-                        response = $"'{serialTitle}' not found";
+                        response = $"Сериал '{serialTitle}' не найден";
                 }
                 db.SaveChanges();
             }
 
-            TelegramApi.SendMessage(Message.From.Id, response);
+            TelegramApi.SendMessage(Message.From, response);
             return true;
         }
     }

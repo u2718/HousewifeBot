@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using DAL;
 using Telegram;
 using User = DAL.User;
@@ -14,14 +10,7 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            do
-            {
-                Thread.Sleep(200);
-            } while (TelegramApi.Updates[Message.From].IsEmpty);
-
-            Message message;
-            TelegramApi.Updates[Message.From].TryDequeue(out message);
-
+            Message message = TelegramApi.WaitForMessage(Message.From);
             string serialTitle = message.Text;
             string response = string.Empty;
 
@@ -65,7 +54,7 @@ namespace HousewifeBot
                 } while (false);
                 db.SaveChanges();
             }
-            TelegramApi.SendMessage(message.From.Id, response);
+            TelegramApi.SendMessage(message.From, response);
             return true;
         }
     }

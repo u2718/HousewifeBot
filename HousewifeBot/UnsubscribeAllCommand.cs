@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using DAL;
 
 namespace HousewifeBot
@@ -40,7 +36,7 @@ namespace HousewifeBot
                 db.SaveChanges();
             }
 
-            TelegramApi.SendMessage(Message.From.Id, response);
+            TelegramApi.SendMessage(Message.From, response);
             return true;
         }
     }

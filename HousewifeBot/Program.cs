@@ -68,7 +68,7 @@ namespace HousewifeBot
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.Message);
+                        Console.WriteLine(e);                        
                     }
                 }
                 Thread.Sleep(200);

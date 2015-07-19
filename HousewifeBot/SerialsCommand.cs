@@ -49,20 +49,15 @@ namespace HousewifeBot
                 {
                     page += "\n/next or /stop";
                 }
-                TelegramApi.SendMessage(Message.From.Id, page);
+                TelegramApi.SendMessage(Message.From, page);
 
                 Message message;
                 do
                 {
-                    do
-                    {
-                        Thread.Sleep(200);
-                    } while (TelegramApi.Updates[Message.From].IsEmpty);
-
-                    TelegramApi.Updates[Message.From].TryDequeue(out message);
+                    message = TelegramApi.WaitForMessage(Message.From);
                     if (message?.Text != "/stop" && message?.Text != "/next")
                     {
-                        TelegramApi.SendMessage(Message.From.Id, "\n/next or /stop");
+                        TelegramApi.SendMessage(Message.From, "\n/next or /stop");
                     }
                 } while (message?.Text != "/stop" && message?.Text != "/next");
 

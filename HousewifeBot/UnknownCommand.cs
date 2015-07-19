@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HousewifeBot
 {
@@ -12,7 +8,7 @@ namespace HousewifeBot
         {
             try
             {
-                TelegramApi.SendMessage(Message.From.Id, "Пощади, братишка");
+                TelegramApi.SendMessage(Message.From, "Пощади, братишка");
             }
             catch (Exception)
             {
