@@ -35,6 +35,8 @@ namespace HousewifeBot
                     return new SubscribeAllCommand();
                 case @"/unsubscribe":
                     return new UnsubscribeCommand();
+                case @"/unsubscribe_all":
+                    return new UnsubscribeAllCommand();
                 default:
                     return new UnknownCommand();
             }
