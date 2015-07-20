@@ -10,9 +10,18 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            Message message = TelegramApi.WaitForMessage(Message.From);
-            string serialTitle = message.Text;
-            string response = string.Empty;
+            string serialTitle;
+            if (string.IsNullOrEmpty(Arguments))
+            {
+                TelegramApi.SendMessage(Message.From, "Введите название сериала");
+                serialTitle = TelegramApi.WaitForMessage(Message.From).Text;
+            }
+            else
+            {
+                serialTitle = Arguments;
+            }
+
+            string response;
 
             using (var db = new AppDbContext())
             {
@@ -29,7 +38,7 @@ namespace HousewifeBot
                         break;
                     }
 
-                    User user = db.Users.FirstOrDefault(u => u.TelegramUserId == message.From.Id);
+                    User user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
                     if (user == null)
                     {
                         response = "Вы не подписаны ни на один сериал";
@@ -50,11 +59,11 @@ namespace HousewifeBot
                         );
 
                     db.Subscriptions.Remove(subscription);
-                    response = $"Вы отписались от сериала '{serialTitle}'";
+                    response = $"Вы отписались от сериала '{serial.Title}'";
                 } while (false);
                 db.SaveChanges();
             }
-            TelegramApi.SendMessage(message.From, response);
+            TelegramApi.SendMessage(Message.From, response);
             return true;
         }
     }

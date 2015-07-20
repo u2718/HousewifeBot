@@ -11,8 +11,16 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            Message message = TelegramApi.WaitForMessage(Message.From);
-            string serialTitle = message.Text;
+            string serialTitle;
+            if (string.IsNullOrEmpty(Arguments))
+            {
+                TelegramApi.SendMessage(Message.From, "Введите название сериала");
+                serialTitle = TelegramApi.WaitForMessage(Message.From).Text;
+            }
+            else
+            {
+                serialTitle = Arguments;
+            }
 
             string response;
             using (AppDbContext db = new AppDbContext())

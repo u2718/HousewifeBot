@@ -1,9 +1,26 @@
-﻿using Telegram;
+﻿using System.Text.RegularExpressions;
+using Telegram;
 
 namespace HousewifeBot
 {
     public abstract class Command
     {
+        private static readonly Regex ArgumentsRegex = new Regex(@"/\w+\s*(.+)?");
+
+        private string _arguments;
+
+        public string Arguments
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_arguments))
+                {
+                    _arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
+                }
+                return _arguments;
+            }
+        }
+
         public TelegramApi TelegramApi { get; set; }
         public Message Message { get; set; }
 

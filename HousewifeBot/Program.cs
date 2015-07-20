@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram;
@@ -43,6 +44,8 @@ namespace HousewifeBot
             sendNotificationsTask.Start();
 
             var processingCommandUsers = new ConcurrentDictionary<User, bool>();
+            Regex commandRegex = new Regex(@"(/\w+)\s*");
+
             while (true)
             {
                 foreach (var update in tg.Updates)
@@ -60,9 +63,11 @@ namespace HousewifeBot
                     }
                     Message message = null;
                     update.Value.TryDequeue(out message);
+
+                    string commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
                     try
                     {
-                        command = Command.CreateCommand(message.Text);
+                        command = Command.CreateCommand(commandTitle);
                     }
                     catch (Exception e)
                     {
