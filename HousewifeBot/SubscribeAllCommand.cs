@@ -37,8 +37,9 @@ namespace HousewifeBot
                     {
                         user.Subscriptions.Add(subscription);
                         db.Users.Add(user);
+                        newUser = false;
                     }
-                    else
+                    else if (!db.Subscriptions.Any(s => s.User.Id == user.Id && s.Show.Id == show.Id))
                     {
                         db.Subscriptions.Add(subscription);
                     }
