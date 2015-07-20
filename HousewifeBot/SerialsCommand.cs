@@ -9,6 +9,8 @@ namespace HousewifeBot
 {
     class SerialsCommand : Command
     {
+        private const int MaxPageSize = 50;
+
         public SerialsCommand(TelegramApi telegramApi, Message message) : base(telegramApi, message)
         {
         }
@@ -19,11 +21,18 @@ namespace HousewifeBot
 
         public override bool Execute()
         {
-            int pageSize = 10;
+            int pageSize;
+            int.TryParse(Arguments, out pageSize);
+            if (pageSize == 0)
+            {
+                pageSize = MaxPageSize;
+            }
+            pageSize = Math.Min(pageSize, MaxPageSize);
+
             List<string> serials;
             using (var db = new AppDbContext())
             {
-                serials = db.Shows.Select(s => s.Title).ToList();
+                serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
             }
 
             List<string> pagesList = new List<string>();
