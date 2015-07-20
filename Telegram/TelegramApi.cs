@@ -84,7 +84,7 @@ namespace Telegram
         }
 
         public Message SendMessage(int chatId, string text)
-        { 
+        {
             return ExecuteMethod<Message>("sendMessage",
                 new Dictionary<string, object>()
                 {
@@ -117,23 +117,38 @@ namespace Telegram
             }
 
             string url = string.Format(BotUrl, _token, method);
+            FormUrlEncodedContent content = null;
             if (parameters != null)
             {
-                var parametersArray = parameters
-                    .Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value.ToString())}&").ToArray();
-
-                url += $"?{string.Join("&", parametersArray)}";
+                content = new FormUrlEncodedContent(parameters.Aggregate(
+                    new Dictionary<string, string>(),
+                    (dictionary, pair) =>
+                    {
+                        dictionary.Add(pair.Key, pair.Value.ToString());
+                        return dictionary;
+                    }
+                    ));
             }
-            
+
             string response = string.Empty;
             for (int i = 0; i <= RetryCount; i++)
             {
                 try
                 {
-                    var r = _httpClient.GetStringAsync(url);
-                    r.Wait();
-                    response = Uri.UnescapeDataString(r.Result);
+                    if (parameters != null)
+                    {
+                        var responseTask = _httpClient.PostAsync(url, content);
+                        responseTask.Wait();
+                        response = responseTask.Result.Content.ReadAsStringAsync().Result;
+                    }
+                    else
+                    {
+                        var r = _httpClient.GetStringAsync(url);
+                        r.Wait();
+                        response = Uri.UnescapeDataString(r.Result);
+                    }
                     break;
+
                 }
                 catch (Exception e)
                 {
