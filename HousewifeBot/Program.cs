@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram;
@@ -40,10 +42,17 @@ namespace HousewifeBot
                 );
             sendNotificationsTask.Start();
 
+            var processingCommandUsers = new ConcurrentDictionary<User, bool>();
             while (true)
             {
                 foreach (var update in tg.Updates)
                 {
+                    if (processingCommandUsers.ContainsKey(update.Key) && 
+                        processingCommandUsers[update.Key])
+                    {
+                        continue;
+                    }
+
                     Command command = null;
                     if (update.Value.Count == 0)
                     {
@@ -60,16 +69,12 @@ namespace HousewifeBot
                         Console.WriteLine(e.Message);
                         continue;
                     }
+
                     command.TelegramApi = tg;
                     command.Message = message;
-                    try
-                    {
-                        command.Execute();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);                        
-                    }
+                    processingCommandUsers[update.Key] = true;
+                    Task commandTask = Task.Run(() => command.Execute());
+                    commandTask.ContinueWith(task => processingCommandUsers[update.Key] = false);
                 }
                 Thread.Sleep(200);
             }
