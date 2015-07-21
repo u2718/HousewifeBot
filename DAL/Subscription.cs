@@ -6,6 +6,6 @@ namespace DAL
     {
         public virtual User User { get; set; }
         public virtual Show Show { get; set; }
-        public DateTime SubscriptionDate { get; set; }
+        public DateTimeOffset SubscriptionDate { get; set; }
     }
 }

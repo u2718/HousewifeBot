@@ -6,7 +6,7 @@ namespace DAL
     {
         public int SiteId { get; set; }
         public string Title { get; set; }
-        public DateTime? Date { get; set; }
+        public DateTimeOffset? Date { get; set; }
 
         public virtual Show Show { set; get; }
     }

@@ -53,7 +53,7 @@ namespace HousewifeBot
                         {
                             User = user,
                             Show = show,
-                            SubscriptionDate = DateTime.Now
+                            SubscriptionDate = DateTimeOffset.Now
                         };
 
                         if (newUser)

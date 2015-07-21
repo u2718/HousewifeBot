@@ -10,8 +10,9 @@ namespace Scraper
 {
     class LostFilmScraper : Scraper
     {
-        private readonly Regex _dateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
-        private readonly Regex _idRegex = new Regex(@"id=(\d+)");
+        private static readonly Regex DateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
+        private static readonly Regex IdRegex = new Regex(@"id=(\d+)");
+        private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
 
         public LostFilmScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
@@ -41,7 +42,7 @@ namespace Scraper
 
         protected override string GetPageUrlByNumber(int pageNumber)
         {
-            return Url + $"?o={pageNumber*15}";
+            return Url + $"?o={pageNumber * 15}";
         }
 
         private HtmlDocument DownloadDocument(string url)
@@ -99,7 +100,7 @@ namespace Scraper
                 //a[@class='a_details']")
                 ?.Select(
                     s => s?.Attributes["href"] != null ?
-                    _idRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
+                    IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
                     null)
                 ?.ToArray();
 
@@ -110,7 +111,7 @@ namespace Scraper
 
             var dateList = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']")
                 ?.First()?.InnerHtml;
-            var dates = dateList != null ? _dateRegex.Matches(dateList) : null;
+            var dates = dateList != null ? DateRegex.Matches(dateList) : null;
 
             Dictionary<string, Show> showDictionary = new Dictionary<string, Show>();
             bool stop = false;
@@ -133,12 +134,14 @@ namespace Scraper
                     break;
                 }
 
-                DateTime? date = null;
+                DateTimeOffset? date = null;
                 if (dates != null)
                 {
                     DateTime tempDateTime;
-                    date = DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime) ? 
-                        tempDateTime : (DateTime?)null;
+                    if (DateTime.TryParse(dates[i].Groups[1].Value, out tempDateTime))
+                    {
+                        date = new DateTimeOffset(tempDateTime, SiteTimeZoneInfo.BaseUtcOffset);
+                    }
                 }
 
                 if (!showDictionary.ContainsKey(showTitles[i]))

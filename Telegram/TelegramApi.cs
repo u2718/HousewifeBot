@@ -138,14 +138,12 @@ namespace Telegram
                     if (parameters != null)
                     {
                         var responseTask = _httpClient.PostAsync(url, content);
-                        responseTask.Wait();
                         response = responseTask.Result.Content.ReadAsStringAsync().Result;
                     }
                     else
                     {
-                        var r = _httpClient.GetStringAsync(url);
-                        r.Wait();
-                        response = Uri.UnescapeDataString(r.Result);
+                        var responseTask = _httpClient.GetStringAsync(url);
+                        response = Uri.UnescapeDataString(responseTask.Result);
                     }
                     break;
 
