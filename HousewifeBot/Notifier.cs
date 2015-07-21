@@ -77,7 +77,7 @@ namespace HousewifeBot
                 foreach (var userNotifications in notificationDictionary)
                 {
                     string text = string.Join(", ", userNotifications.Value
-                        .Select(n => n.Subscription.Show.Title));
+                        .Select(n => n.Subscription.Show.Title + " - " + n.Series.Title));
                     TelegramApi.SendMessage(userNotifications.Key.TelegramUserId, text);
                 }
 
