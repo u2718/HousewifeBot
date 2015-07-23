@@ -34,5 +34,10 @@ namespace Telegram
             if (obj.GetType() != this.GetType()) return false;
             return Equals((User) obj);
         }
+
+        public override string ToString()
+        {
+            return $"Id: {Id}, FirstName: {FirstName}, LastName: {LastName}, Username: {Username}";
+        }
     }
 }

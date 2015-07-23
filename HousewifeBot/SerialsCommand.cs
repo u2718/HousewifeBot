@@ -21,59 +21,82 @@ namespace HousewifeBot
 
         public override bool Execute()
         {
-            int pageSize;
-            int.TryParse(Arguments, out pageSize);
-            if (pageSize == 0)
+            Program.Logger.Debug($"SerialsCommand: Parsing message size. Arguments: {Arguments}");
+            int messageSize;
+            int.TryParse(Arguments, out messageSize);
+            if (messageSize == 0)
             {
-                pageSize = MaxPageSize;
+                messageSize = MaxPageSize;
             }
-            pageSize = Math.Min(pageSize, MaxPageSize);
+            messageSize = Math.Min(messageSize, MaxPageSize);
+            Program.Logger.Debug($"SerialsCommand: Message size: {messageSize}");
 
             List<string> serials;
-            using (var db = new AppDbContext())
+            try
             {
-                serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                Program.Logger.Debug($"SerialsCommand: Retrieving serials list");
+                using (var db = new AppDbContext())
+                {
+                    serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("SerialsCommand: An error occurred while retrieving serials list", e);
             }
 
             List<string> pagesList = new List<string>();
-            for (int i = 0; i < serials.Count; i += pageSize)
+            for (int i = 0; i < serials.Count; i += messageSize)
             {
                 if (i > serials.Count)
                 {
                     break;
                 }
 
-                int count = Math.Min(serials.Count - i, pageSize);
+                int count = Math.Min(serials.Count - i, messageSize);
                 pagesList.Add(
                     serials.GetRange(i, count)
                     .Aggregate("", (s, s1) => s + "\n" + s1)
                     );
             }
 
-            for (int i = 0; i < pagesList.Count; i++)
+            try
             {
-                string page = pagesList[i];
+                Program.Logger.Debug("SerialsCommand: Sending serials list");
 
-                if (i != pagesList.Count - 1)
+                for (int i = 0; i < pagesList.Count; i++)
                 {
-                    page += "\n/next or /stop";
-                }
-                TelegramApi.SendMessage(Message.From, page);
+                    string page = pagesList[i];
 
-                Message message;
-                do
-                {
-                    message = TelegramApi.WaitForMessage(Message.From);
-                    if (message?.Text != "/stop" && message?.Text != "/next")
+                    if (i != pagesList.Count - 1)
                     {
-                        TelegramApi.SendMessage(Message.From, "\n/next or /stop");
+                        page += "\n/next or /stop";
                     }
-                } while (message?.Text != "/stop" && message?.Text != "/next");
+                    TelegramApi.SendMessage(Message.From, page);
 
-                if (message.Text == "/stop")
-                {
-                    break;
+                    if (i == pagesList.Count - 1)
+                    {
+                        break;
+                    }
+                    Message message;
+                    do
+                    {
+                        message = TelegramApi.WaitForMessage(Message.From);
+                        if (message?.Text != "/stop" && message?.Text != "/next")
+                        {
+                            TelegramApi.SendMessage(Message.From, "\n/next or /stop");
+                        }
+                    } while (message?.Text != "/stop" && message?.Text != "/next");
+
+                    if (message.Text == "/stop")
+                    {
+                        break;
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("SerialsCommand: An error occurred while sending serials list", e);
             }
 
             return true;
