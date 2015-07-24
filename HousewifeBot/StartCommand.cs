@@ -8,7 +8,14 @@ namespace HousewifeBot
         {
             try
             {
-                TelegramApi.SendMessage(Message.From, $"Шалом, {Message.From.FirstName}. Введи '/help', чтобы посмотреть список команд.");
+                TelegramApi.SendMessage(Message.From, $"Шалом, {Message.From.FirstName}. \n"+ 
+                "Список команд: \n" +
+                "/serials - вывести список всех сериалов \n" +
+                "/subscribe - подписаться на сериал \n" +
+                "/unsubscribe - отписаться от сериала \n" +
+                "/unsubscribe_all - отписаться от всех сериалов \n" +
+                "/help - справка"
+                );
             }
             catch (Exception)
             {
