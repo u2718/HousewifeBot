@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using DAL;
 using Telegram;
 
@@ -32,18 +31,20 @@ namespace HousewifeBot
             Program.Logger.Debug($"SerialsCommand: Message size: {messageSize}");
 
             List<string> serials;
-            try
+
+            Program.Logger.Debug($"SerialsCommand: Retrieving serials list");
+            using (var db = new AppDbContext())
             {
-                Program.Logger.Debug($"SerialsCommand: Retrieving serials list");
-                using (var db = new AppDbContext())
+                try
                 {
                     serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
                 }
+                catch (Exception e)
+                {
+                    throw new Exception("SerialsCommand: An error occurred while retrieving serials list", e);
+                }
             }
-            catch (Exception e)
-            {
-                throw new Exception("SerialsCommand: An error occurred while retrieving serials list", e);
-            }
+
 
             List<string> pagesList = new List<string>();
             for (int i = 0; i < serials.Count; i += messageSize)
@@ -99,6 +100,7 @@ namespace HousewifeBot
                 throw new Exception("SerialsCommand: An error occurred while sending serials list", e);
             }
 
+            Status = true;
             return true;
         }
     }

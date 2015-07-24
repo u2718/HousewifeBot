@@ -114,7 +114,7 @@ namespace HousewifeBot
                     {
                         processingCommandUsers[update.Key] = false;
                         Logger.Debug($"{command.GetType().Name} from " +
-                                     $"{message.From.FirstName} {message.From.LastName} succeeded");
+                                     $"{message.From.FirstName} {message.From.LastName} {(command.Status ? "succeeded" : "failed")}");
                     });
                 }
                 Thread.Sleep(200);

@@ -24,6 +24,8 @@ namespace HousewifeBot
         public TelegramApi TelegramApi { get; set; }
         public Message Message { get; set; }
 
+        public bool Status { get; protected set; } = false;
+
         protected Command(TelegramApi telegramApi, Message message)
         {
             TelegramApi = telegramApi;
