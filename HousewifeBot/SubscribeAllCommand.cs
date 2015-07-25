@@ -11,7 +11,7 @@ namespace HousewifeBot
         {
             using (AppDbContext db = new AppDbContext())
             {
-                Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in data base");
+                Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
 
                 User user;
                 try
@@ -20,7 +20,7 @@ namespace HousewifeBot
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching user in data base", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
                 }
 
                 if (user == null)
@@ -35,14 +35,14 @@ namespace HousewifeBot
 
                     Program.Logger.Info($"{GetType().Name}: {user.FirstName} {user.LastName} is new User");
 
-                    Program.Logger.Debug($"{GetType().Name}: Adding user {user.FirstName} {user.LastName} to data base");
+                    Program.Logger.Debug($"{GetType().Name}: Adding user {user.FirstName} {user.LastName} to database");
                     try
                     {
                         db.Users.Add(user);
                     }
                     catch (Exception e)
                     {
-                        throw new Exception($"{GetType().Name}: An error occurred while adding user to data base", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while adding user to database", e);
                     }
                 }
                 else
@@ -95,24 +95,24 @@ namespace HousewifeBot
                     }
                 }
 
-                Program.Logger.Debug($"{GetType().Name}: Saving changes to data base");
+                Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
                 try
                 {
                     db.SaveChanges();
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to data base", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                 }
             }
-            Program.Logger.Debug($"SubscribeCommand: Sending response to {Message.From.FirstName} {Message.From.LastName}");
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From.FirstName} {Message.From.LastName}");
             try
             {
                 TelegramApi.SendMessage(Message.From, "Вы, братишка, подписаны на все сериалы");
             }
             catch (Exception e)
             {
-                throw new Exception($"SubscribeCommand: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
             }
 
             Status = true;

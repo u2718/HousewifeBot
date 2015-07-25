@@ -20,7 +20,7 @@ namespace HousewifeBot
 
         public override bool Execute()
         {
-            Program.Logger.Debug($"SerialsCommand: Parsing message size. Arguments: {Arguments}");
+            Program.Logger.Debug($"{GetType().Name}: Parsing message size. Arguments: {Arguments}");
             int messageSize;
             int.TryParse(Arguments, out messageSize);
             if (messageSize == 0)
@@ -28,11 +28,11 @@ namespace HousewifeBot
                 messageSize = MaxPageSize;
             }
             messageSize = Math.Min(messageSize, MaxPageSize);
-            Program.Logger.Debug($"SerialsCommand: Message size: {messageSize}");
+            Program.Logger.Debug($"{GetType().Name}: Message size: {messageSize}");
 
             List<string> serials;
 
-            Program.Logger.Debug($"SerialsCommand: Retrieving serials list");
+            Program.Logger.Debug($"{GetType().Name}: Retrieving serials list");
             using (var db = new AppDbContext())
             {
                 try
@@ -41,7 +41,7 @@ namespace HousewifeBot
                 }
                 catch (Exception e)
                 {
-                    throw new Exception("SerialsCommand: An error occurred while retrieving serials list", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while retrieving serials list", e);
                 }
             }
 
@@ -63,7 +63,7 @@ namespace HousewifeBot
 
             try
             {
-                Program.Logger.Debug("SerialsCommand: Sending serials list");
+                Program.Logger.Debug($"{GetType().Name}: Sending serials list");
 
                 for (int i = 0; i < pagesList.Count; i++)
                 {
@@ -97,7 +97,7 @@ namespace HousewifeBot
             }
             catch (Exception e)
             {
-                throw new Exception("SerialsCommand: An error occurred while sending serials list", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending serials list", e);
             }
 
             Status = true;

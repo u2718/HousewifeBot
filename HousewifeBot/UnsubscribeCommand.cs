@@ -15,24 +15,24 @@ namespace HousewifeBot
             using (var db = new AppDbContext())
             {
                 Program.Logger.Debug(
-                    $"UnsubscribeCommand: Searching user with TelegramId: {Message.From.Id} in data base");
+                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
                 try
                 {
                     user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
                 }
                 catch (Exception e)
                 {
-                    throw new Exception("UnsubscribeCommand: An error occurred while searching user in data base", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
                 }
 
                 if (user == null)
                 {
                     Program.Logger.Debug(
-                        $"UnsubscribeCommand: User {Message.From.FirstName} {Message.From.LastName} is not exists");
+                        $"{GetType().Name}: User {Message.From.FirstName} {Message.From.LastName} is not exists");
                 }
                 else
                 {
-                    Program.Logger.Debug($"UnsubscribeCommand: Checking if user has subscriptions");
+                    Program.Logger.Debug($"{GetType().Name}: Checking if user has subscriptions");
                     try
                     {
                         userHasSubscriptions = db.Subscriptions.Any(s => s.User.Id == user.Id);
@@ -40,7 +40,7 @@ namespace HousewifeBot
                     catch (Exception e)
                     {
                         throw new Exception(
-                            "UnsubscribeCommand: An error occurred while checking if user has subscriptions", e);
+                            $"{GetType().Name}: An error occurred while checking if user has subscriptions", e);
                     }
                 }
             }
@@ -50,17 +50,17 @@ namespace HousewifeBot
                 string serialTitle;
                 if (string.IsNullOrEmpty(Arguments))
                 {
-                    Program.Logger.Debug("UnsubscribeCommand: Sending 'Enter serial title' prompt");
+                    Program.Logger.Debug($"{GetType().Name}: Sending 'Enter serial title' prompt");
                     try
                     {
                         TelegramApi.SendMessage(Message.From, "Введите название сериала");
                     }
                     catch (Exception e)
                     {
-                        throw new Exception("UnsubscribeCommand: An error occurred while sending prompt", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while sending prompt", e);
                     }
 
-                    Program.Logger.Debug("UnsubscribeCommand: Waiting for a message that contains serial title");
+                    Program.Logger.Debug($"{GetType().Name}: Waiting for a message that contains serial title");
                     try
                     {
                         serialTitle = TelegramApi.WaitForMessage(Message.From).Text;
@@ -68,7 +68,7 @@ namespace HousewifeBot
                     catch (Exception e)
                     {
                         throw new Exception(
-                            "UnsubscribeCommand: An error occurred while waiting for a message that contains serial title",
+                            $"{GetType().Name}: An error occurred while waiting for a message that contains serial title",
                             e);
                     }
                 }
@@ -78,13 +78,13 @@ namespace HousewifeBot
                 }
 
                 Program.Logger.Info(
-                    $"UnsubscribeCommand: {Message.From.FirstName} {Message.From.FirstName} is trying to unsubscribe from '{serialTitle}'");
+                    $"{GetType().Name}: {Message.From.FirstName} {Message.From.FirstName} is trying to unsubscribe from '{serialTitle}'");
 
                 using (var db = new AppDbContext())
                 {
                     do
                     {
-                        Program.Logger.Debug($"UnsubscribeCommand: Searching serial {serialTitle} in data base");
+                        Program.Logger.Debug($"{GetType().Name}: Searching serial {serialTitle} in database");
 
                         Show serial;
                         try
@@ -97,18 +97,18 @@ namespace HousewifeBot
                         catch (Exception e)
                         {
                             throw new Exception(
-                                $"UnsubscribeCommand: An error occurred while searching serial {serialTitle} in data base",
+                                $"{GetType().Name}: An error occurred while searching serial {serialTitle} in database",
                                 e);
                         }
 
                         if (serial == null)
                         {
-                            Program.Logger.Info($"UnsubscribeCommand: Serial {serialTitle} was not found");
+                            Program.Logger.Info($"{GetType().Name}: Serial {serialTitle} was not found");
                             response = $"Сериал '{serialTitle}' не найден";
                             break;
                         }
 
-                        Program.Logger.Debug("UnsubscribeCommand: Checking for subscription existence");
+                        Program.Logger.Debug($"{GetType().Name}: Checking for subscription existence");
                         Subscription subscription;
                         try
                         {
@@ -118,18 +118,18 @@ namespace HousewifeBot
                         catch (Exception e)
                         {
                             throw new Exception(
-                                "UnsubscribeCommand: An error occurred while checking for subscription existence", e);
+                                $"{GetType().Name}: An error occurred while checking for subscription existence", e);
                         }
 
                         if (subscription == null)
                         {
                             Program.Logger.Debug(
-                                $"UnsubscribeCommand: User {Message.From.FirstName} {Message.From.LastName} is not subscribed to {serial.OriginalTitle}");
+                                $"{GetType().Name}: User {Message.From.FirstName} {Message.From.LastName} is not subscribed to {serial.OriginalTitle}");
                             response = $"Вы не подписаны на сериал '{serial.Title}'";
                             break;
                         }
 
-                        Program.Logger.Debug("UnsubscribeCommand: Deleting notifications for subscription");
+                        Program.Logger.Debug($"{GetType().Name}: Deleting notifications for subscription");
                         try
                         {
                             db.Notifications.RemoveRange(
@@ -139,17 +139,17 @@ namespace HousewifeBot
                         catch (Exception e)
                         {
                             throw new Exception(
-                                "UnsubscribeCommand: An error occurred while deleting notifications for subscription", e);
+                                $"{GetType().Name}: An error occurred while deleting notifications for subscription", e);
                         }
 
-                        Program.Logger.Debug("UnsubscribeCommand: Deleting subscription");
+                        Program.Logger.Debug($"{GetType().Name}: Deleting subscription");
                         try
                         {
                             db.Subscriptions.Remove(subscription);
                         }
                         catch (Exception e)
                         {
-                            throw new Exception("UnsubscribeCommand: An error occurred while deleting subscription", e);
+                            throw new Exception($"{GetType().Name}: An error occurred while deleting subscription", e);
                         }
 
                         response = $"Вы отписались от сериала '{serial.Title}'";
@@ -161,7 +161,7 @@ namespace HousewifeBot
                     }
                     catch (Exception e)
                     {
-                        throw new Exception("UnsubscribeCommand: An error occurred while saving changes to data base", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                     }
                 }
             }
@@ -170,14 +170,14 @@ namespace HousewifeBot
                 response = "Вы не подписаны ни на один сериал";
             }
 
-            Program.Logger.Debug($"UnsubscribeCommand: Sending response to {Message.From.FirstName} {Message.From.LastName}");
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From.FirstName} {Message.From.LastName}");
             try
             {
                 TelegramApi.SendMessage(Message.From, response);
             }
             catch (Exception e)
             {
-                throw new Exception($"UnsubscribeCommand: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}d: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
             }
 
             Status = true;

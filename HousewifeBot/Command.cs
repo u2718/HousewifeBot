@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 using Telegram;
 
 namespace HousewifeBot
@@ -15,7 +16,14 @@ namespace HousewifeBot
             {
                 if (string.IsNullOrEmpty(_arguments))
                 {
-                    _arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
+                    try
+                    {
+                        _arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception("Error while parsing command string", e);
+                    }
                 }
                 return _arguments;
             }

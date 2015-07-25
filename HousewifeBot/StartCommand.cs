@@ -21,7 +21,7 @@ namespace HousewifeBot
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}: An error occurred while sending help messge to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending help message to {Message.From.FirstName} {Message.From.LastName}", e);
             }
 
             Status = true;

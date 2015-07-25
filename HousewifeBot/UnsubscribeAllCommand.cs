@@ -15,14 +15,14 @@ namespace HousewifeBot
                 {
                     User user;
                     Program.Logger.Debug(
-                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in data base");
+                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
                     try
                     {
                         user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
                     }
                     catch (Exception e)
                     {
-                        throw new Exception($"{GetType().Name}: An error occurred while searching user in data base", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
                     }
 
                     if (user == null)
@@ -77,14 +77,14 @@ namespace HousewifeBot
                     response = "Вы отписались от всех сериалов";
                 } while (false);
 
-                Program.Logger.Debug($"{GetType().Name}: Saving changes to data base");
+                Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
                 try
                 {
                     db.SaveChanges();
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to data base", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                 }
             }
 
