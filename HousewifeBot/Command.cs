@@ -41,6 +41,10 @@ namespace HousewifeBot
         {
             switch (command.ToLower())
             {
+                case @"/start":
+                    return new StartCommand();
+                case @"/help":
+                    return new HelpCommand();                
                 case @"/serials":
                     return new SerialsCommand();
                 case @"/subscribe":
