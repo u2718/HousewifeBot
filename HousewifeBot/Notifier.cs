@@ -21,6 +21,10 @@ namespace HousewifeBot
             {
                 foreach (Subscription subscription in db.Subscriptions)
                 {
+                    if (subscription.User == null || subscription.Show == null)
+                    {
+                        continue;
+                    }
                     List<Series> seriesList = db.Series
                         .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate)
                         .Select(s => s).ToList();
