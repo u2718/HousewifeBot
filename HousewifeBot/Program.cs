@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Telegram;
-
+using System.Configuration;
 namespace HousewifeBot
 {
     class Program
@@ -18,7 +17,17 @@ namespace HousewifeBot
         {
             Logger.Info($"HousewifeBot started: {Assembly.GetEntryAssembly().Location}");
 
-            var token = File.ReadAllText(@"token.txt");
+            string token;
+            try
+            {
+                token = ConfigurationManager.AppSettings["TelegramToken"];
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading token");
+                return;
+            }
+
             TelegramApi tg = new TelegramApi(token);
             try
             {
