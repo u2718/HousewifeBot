@@ -11,7 +11,7 @@ namespace HousewifeBot
 {
     class Program
     {
-        public static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        public static readonly Logger Logger = LogManager.GetLogger("Common");
 
         static void Main()
         {
