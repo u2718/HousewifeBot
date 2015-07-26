@@ -13,22 +13,55 @@ namespace HousewifeBot
     {
         public static readonly Logger Logger = LogManager.GetLogger("Common");
 
-        static void Main()
-        {
-            Logger.Info($"HousewifeBot started: {Assembly.GetEntryAssembly().Location}");
+        private static string _token;
+        private static int _updateNotificationsInterval;
+        private static int _sendNotificationsInterval;
 
-            string token;
+        static bool LoadSettings()
+        {
+            bool result = true;
             try
             {
-                token = ConfigurationManager.AppSettings["TelegramToken"];
+                _token = ConfigurationManager.AppSettings["TelegramToken"];
             }
             catch (Exception e)
             {
                 Logger.Fatal(e, "An error occurred while loading token");
-                return;
+                result = false;
             }
 
-            TelegramApi tg = new TelegramApi(token);
+            try
+            {
+                _updateNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["UpdateNotificationsInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading update notifications interval");
+                result = false;
+            }
+
+            try
+            {
+                _sendNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendNotificationsInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading send notifications interval");
+                result = false;
+            }
+
+            return result;
+        }
+
+        static void Main()
+        {
+            Logger.Info($"HousewifeBot started: {Assembly.GetEntryAssembly().Location}");
+            if (!LoadSettings())
+            {
+                return;
+            }
+            
+            TelegramApi tg = new TelegramApi(_token);
             try
             {
                 Logger.Debug("Executing GetMe");
@@ -51,7 +84,7 @@ namespace HousewifeBot
                     while (true)
                     {
                         notifier.UpdateNotifications();
-                        Thread.Sleep(5000);
+                        Thread.Sleep(_updateNotificationsInterval);
                     }
                 }
                 );
@@ -63,7 +96,7 @@ namespace HousewifeBot
                     while (true)
                     {
                         notifier.SendNotifications();
-                        Thread.Sleep(10000);
+                        Thread.Sleep(_sendNotificationsInterval);
                     }
                 }
                 );
