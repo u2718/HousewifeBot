@@ -25,7 +25,7 @@ namespace HousewifeBot
 
             using (AppDbContext db = new AppDbContext())
             {
-                Logger.Debug("UpdateNotifications: Retrieving subscriptions");
+                Logger.Trace("UpdateNotifications: Retrieving subscriptions");
                 List<Subscription> subscriptions;
                 try
                 {
@@ -37,7 +37,7 @@ namespace HousewifeBot
                     return;
                 }
 
-                Logger.Debug("UpdateNotifications: Retrieving new series for subscriptions");
+                Logger.Trace("UpdateNotifications: Retrieving new series for subscriptions");
                 foreach (Subscription subscription in subscriptions)
                 {
                     if (subscription.User == null || subscription.Show == null)
@@ -97,17 +97,7 @@ namespace HousewifeBot
 
                     try
                     {
-
                         db.Notifications.AddRange(newNotifications);
-                        //foreach (Series series in seriesList)
-                        //{
-                        //    Notification notification = new Notification
-                        //    {
-                        //        Series = series,
-                        //        Subscription = subscription
-                        //    };
-                        //    db.Notifications.AddR(notification);
-                        //}
                     }
                     catch (Exception e)
                     {
@@ -117,7 +107,7 @@ namespace HousewifeBot
                     newNotificationsCount += newNotifications.Count;
                 }
 
-                Logger.Debug("UpdateNotifications: Saving changes to database");
+                Logger.Trace("UpdateNotifications: Saving changes to database");
                 try
                 {
                     db.SaveChanges();
@@ -140,7 +130,7 @@ namespace HousewifeBot
             using (AppDbContext db = new AppDbContext())
             {
 
-                Logger.Debug("UpdateNotifications: Retrieving new notifications");
+                Logger.Trace("SendNotifications: Retrieving new notifications");
                 List<Notification> notifications;
                 try
                 {
@@ -150,7 +140,7 @@ namespace HousewifeBot
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while retrieving new notifications");
+                    Logger.Error(e, "SendNotifications: An error occurred while retrieving new notifications");
                     return;
                 }
 
@@ -176,7 +166,7 @@ namespace HousewifeBot
                     }
                     );
 
-                Logger.Debug("UpdateNotifications: Sending new notifications");
+                Logger.Debug("SendNotifications: Sending new notifications");
                 foreach (var userNotifications in notificationDictionary)
                 {
                     string text = string.Join(", ", userNotifications.Value
@@ -188,14 +178,14 @@ namespace HousewifeBot
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(e, "UpdateNotifications: An error occurred while sending new notifications");
+                        Logger.Error(e, "SendNotifications: An error occurred while sending new notifications");
                     }
                 }
 
-                Logger.Info($"UpdateNotifications: {notificationDictionary.Count} new " +
+                Logger.Info($"SendNotifications: {notificationDictionary.Count} new " +
                             $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
 
-                Logger.Debug("UpdateNotifications: Marking new notifications as notified");
+                Logger.Debug("SendNotifications: Marking new notifications as notified");
                 try
                 {
                     notifications.ForEach(
@@ -208,17 +198,17 @@ namespace HousewifeBot
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while marking new notifications as notified");
+                    Logger.Error(e, "SendNotifications: An error occurred while marking new notifications as notified");
                 }
 
-                Logger.Debug("UpdateNotifications: Saving changes to database");
+                Logger.Trace("SendNotifications: Saving changes to database");
                 try
                 {
                     db.SaveChanges();
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while saving changes to database");
+                    Logger.Error(e, "SendNotifications: An error occurred while saving changes to database");
                 }
             }
         }
