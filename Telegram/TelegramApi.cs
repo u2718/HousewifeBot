@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Newtonsoft.Json;
 
 namespace Telegram
@@ -58,13 +59,8 @@ namespace Telegram
             return updates;
         }
 
-        public void StartPolling()
+        public Task StartPolling()
         {
-            if (_pollingTask != null)
-            {
-                return;
-            }
-
             _pollingTask = Task.Run(() =>
             {
                 while (true)
@@ -81,6 +77,7 @@ namespace Telegram
                     Thread.Sleep(200);
                 }
             });
+            return _pollingTask;
         }
 
         public Message SendMessage(int chatId, string text)
@@ -138,6 +135,10 @@ namespace Telegram
                     if (parameters != null)
                     {
                         var responseTask = _httpClient.PostAsync(url, content);
+                        if (!responseTask.Result.IsSuccessStatusCode)
+                        {
+                            throw new HttpException((int)responseTask.Result.StatusCode, string.Empty);
+                        }
                         response = responseTask.Result.Content.ReadAsStringAsync().Result;
                     }
                     else
@@ -150,9 +151,7 @@ namespace Telegram
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
                     Thread.Sleep(1000);
-
                     if (i == RetryCount)
                     {
                         throw;

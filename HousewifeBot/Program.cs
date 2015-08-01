@@ -16,6 +16,7 @@ namespace HousewifeBot
         private static string _token;
         private static int _updateNotificationsInterval;
         private static int _sendNotificationsInterval;
+        private static int _retryPollingDelay;
 
         static bool LoadSettings()
         {
@@ -50,7 +51,32 @@ namespace HousewifeBot
                 result = false;
             }
 
+            try
+            {
+                _retryPollingDelay = int.Parse(ConfigurationManager.AppSettings["RetryPollingDelay"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading retry polling delay");
+                result = false;
+            }
+
             return result;
+        }
+
+        private static void StartPolling(TelegramApi tgApi)
+        {
+            Logger.Debug("Starting polling");
+            Task pollingTask = tgApi.StartPolling();
+            pollingTask.ContinueWith(e =>
+            {
+                Logger.Error(e.Exception, "An error occurred while retrieving updates");
+                new Timer(o =>
+                {
+                    StartPolling(tgApi);
+                }, null, _retryPollingDelay, -1);
+            },
+          TaskContinuationOptions.OnlyOnFaulted);
         }
 
         static void Main()
@@ -74,8 +100,6 @@ namespace HousewifeBot
                 Logger.Error(e);
                 return;
             }
-
-            tg.StartPolling();
 
             Notifier notifier = new Notifier(tg);
             var updateNotificationsTask = new Task(
@@ -105,6 +129,7 @@ namespace HousewifeBot
             var processingCommandUsers = new ConcurrentDictionary<User, bool>();
             Regex commandRegex = new Regex(@"(/\w+)\s*");
 
+            StartPolling(tg);
             while (true)
             {
                 foreach (var update in tg.Updates)
