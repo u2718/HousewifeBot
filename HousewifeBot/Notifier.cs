@@ -37,7 +37,7 @@ namespace HousewifeBot
                     return;
                 }
 
-                Logger.Trace("UpdateNotifications: Retrieving new series for subscriptions");
+                Logger.Trace("UpdateNotifications: Retrieving new episodes for subscriptions");
                 foreach (Subscription subscription in subscriptions)
                 {
                     if (subscription.User == null || subscription.Show == null)
@@ -54,41 +54,41 @@ namespace HousewifeBot
                     catch (Exception e)
                     {
                         Logger.Error(e, "UpdateNotifications: An error occurred while retrieving notifications for subscription: " +
-                                        $" {subscription.User.FirstName} {subscription.User.LastName} -" +
+                                        $" {subscription.User} -" +
                                         $" {subscription.Show.OriginalTitle}");
                         continue;
                     }
 
-                    List<Series> seriesList;
+                    List<Episode> episodes;
                     try
                     {
-                        seriesList = db.Series
+                        episodes = db.Episodes
                             .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate &&
-                            !notifications.Any(n => n.Series.Id == s.Id))
+                            !notifications.Any(n => n.Episode.Id == s.Id))
                             .Select(s => s).ToList();
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(e, "UpdateNotifications: An error occurred while retrieving subscriptions");
+                        Logger.Error(e, "UpdateNotifications: An error occurred while retrieving episodes");
                         continue;
                     }
 
-                    if (seriesList.Count == 0)
+                    if (episodes.Count == 0)
                     {
                         continue;
                     }
 
                     Logger.Debug("UpdateNotifications: Creating notifications for subcription: " +
-                                 $" {subscription.User.FirstName} {subscription.User.LastName} -" +
+                                 $" {subscription.User} -" +
                                  $" {subscription.Show.OriginalTitle}");
 
-                    List<Notification> newNotifications = seriesList.Aggregate(
+                    List<Notification> newNotifications = episodes.Aggregate(
                         new List<Notification>(),
-                        (list, series) =>
+                        (list, episode) =>
                         {
                             list.Add(new Notification
                             {
-                                Series = series,
+                                Episode = episode,
                                 Subscription = subscription
                             });
                             return list;
@@ -152,15 +152,15 @@ namespace HousewifeBot
                 Dictionary<User, List<Notification>> notificationDictionary =
                     notifications.Aggregate(
                     new Dictionary<User, List<Notification>>(),
-                    (d, n) =>
+                    (d, notification) =>
                     {
-                        if (d.ContainsKey(n.Subscription.User))
+                        if (d.ContainsKey(notification.Subscription.User))
                         {
-                            d[n.Subscription.User].Add(n);
+                            d[notification.Subscription.User].Add(notification);
                         }
                         else
                         {
-                            d.Add(n.Subscription.User, new List<Notification>() { n });
+                            d.Add(notification.Subscription.User, new List<Notification>() { notification });
                         }
                         return d;
                     }
@@ -169,8 +169,8 @@ namespace HousewifeBot
                 Logger.Debug("SendNotifications: Sending new notifications");
                 foreach (var userNotifications in notificationDictionary)
                 {
-                    string text = string.Join(", ", userNotifications.Value
-                        .Select(n => n.Subscription.Show.Title + " - " + n.Series.Title));
+                    string text = string.Join("\n", 
+                        userNotifications.Value.Select(n => n.Subscription.Show.Title + " - " + n.Episode.Title));
 
                     try
                     {

@@ -149,7 +149,7 @@ namespace Telegram
                     break;
 
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Thread.Sleep(1000);
                     if (i == RetryCount)

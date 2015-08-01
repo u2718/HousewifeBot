@@ -62,7 +62,7 @@
     <Compile Include="Notifier.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerialsCommand.cs" />
+    <Compile Include="ShowsCommand.cs" />
     <Compile Include="SubscribeAllCommand.cs" />
     <Compile Include="SubscribeCommand.cs" />
     <Compile Include="UnknownCommand.cs" />

@@ -6,15 +6,15 @@ using Telegram;
 
 namespace HousewifeBot
 {
-    class SerialsCommand : Command
+    class ShowsCommand : Command
     {
         private const int MaxPageSize = 50;
 
-        public SerialsCommand(TelegramApi telegramApi, Message message) : base(telegramApi, message)
+        public ShowsCommand(TelegramApi telegramApi, Message message) : base(telegramApi, message)
         {
         }
 
-        public SerialsCommand()
+        public ShowsCommand()
         {
         }
 
@@ -30,40 +30,40 @@ namespace HousewifeBot
             messageSize = Math.Min(messageSize, MaxPageSize);
             Program.Logger.Debug($"{GetType().Name}: Message size: {messageSize}");
 
-            List<string> serials;
+            List<string> shows;
 
-            Program.Logger.Debug($"{GetType().Name}: Retrieving serials list");
+            Program.Logger.Debug($"{GetType().Name}: Retrieving shows list");
             using (var db = new AppDbContext())
             {
                 try
                 {
-                    serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while retrieving serials list", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while retrieving shows list", e);
                 }
             }
 
 
             List<string> pagesList = new List<string>();
-            for (int i = 0; i < serials.Count; i += messageSize)
+            for (int i = 0; i < shows.Count; i += messageSize)
             {
-                if (i > serials.Count)
+                if (i > shows.Count)
                 {
                     break;
                 }
 
-                int count = Math.Min(serials.Count - i, messageSize);
+                int count = Math.Min(shows.Count - i, messageSize);
                 pagesList.Add(
-                    serials.GetRange(i, count)
+                    shows.GetRange(i, count)
                     .Aggregate("", (s, s1) => s + "\n" + s1)
                     );
             }
 
             try
             {
-                Program.Logger.Debug($"{GetType().Name}: Sending serials list");
+                Program.Logger.Debug($"{GetType().Name}: Sending shows list");
 
                 for (int i = 0; i < pagesList.Count; i++)
                 {
@@ -97,7 +97,7 @@ namespace HousewifeBot
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}: An error occurred while sending serials list", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending shows list", e);
             }
 
             Status = true;

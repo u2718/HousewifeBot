@@ -148,13 +148,13 @@ namespace HousewifeBot
                     update.Value.TryDequeue(out message);
 
                     Logger.Debug($"Received message '{message.Text}' from " +
-                                 $"{message.From.FirstName} {message.From.LastName}");
+                                 $"{message.From}");
                     string commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
 
                     Logger.Debug($"Creating command object for '{commandTitle}'");
                     var command = Command.CreateCommand(commandTitle);
                     Logger.Info($"Received {command.GetType().Name} from " +
-                                $"{message.From.FirstName} {message.From.LastName}");
+                                $"{message.From}");
 
                     command.TelegramApi = tg;
                     command.Message = message;
@@ -181,7 +181,7 @@ namespace HousewifeBot
                     {
                         processingCommandUsers[update.Key] = false;
                         Logger.Debug($"{command.GetType().Name} from " +
-                                     $"{message.From.FirstName} {message.From.LastName} {(command.Status ? "succeeded" : "failed")}");
+                                     $"{message.From} {(command.Status ? "succeeded" : "failed")}");
                     });
                 }
                 Thread.Sleep(200);

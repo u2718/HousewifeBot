@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace DAL
 {
-    public class Show : DbEntry
+    public sealed class Show : DbEntry
     {
-        public String Title { get; set; }
-        public String OriginalTitle { get; set; }
-        public virtual List<Series> SeriesList { get; set; }
+        public string Title { get; set; }
+        public string OriginalTitle { get; set; }
+        public List<Episode> Episodes { get; set; }
 
         public Show()
         {
-             SeriesList = new List<Series>();
+             Episodes = new List<Episode>();
         }
     }
 }

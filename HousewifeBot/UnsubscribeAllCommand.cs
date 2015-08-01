@@ -8,7 +8,7 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            string response = string.Empty;
+            string response;
             using (var db = new AppDbContext())
             {
                 do
@@ -18,7 +18,7 @@ namespace HousewifeBot
                     $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
                     try
                     {
-                        user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
+                        user = db.GetUserByTelegramId(Message.From.Id);
                     }
                     catch (Exception e)
                     {
@@ -33,20 +33,20 @@ namespace HousewifeBot
                     }
 
 
-                    IQueryable<Subscription> subscriptions = null;
-                    Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user.FirstName} {user.LastName}");
+                    IQueryable<Subscription> subscriptions;
+                    Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user}");
                     try
                     {
                         subscriptions = db.Subscriptions.Where(s => s.User.Id == user.Id);
                     }
                     catch (Exception e)
                     {
-                        throw new Exception($"{GetType().Name}: An error occurred while retrieving subscriptions of {user.FirstName} {user.LastName}", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while retrieving subscriptions of {user}", e);
                     }
 
                     if (!subscriptions.Any())
                     {
-                        Program.Logger.Debug($"{GetType().Name}: {user.FirstName} {user.LastName} has no subscriptions");
+                        Program.Logger.Debug($"{GetType().Name}: {user} has no subscriptions");
                         response = "Вы не подписаны ни на один сериал";
                         break;
                     }
@@ -88,14 +88,14 @@ namespace HousewifeBot
                 }
             }
 
-            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From.FirstName} {Message.From.LastName}");
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
             try
             {
                 TelegramApi.SendMessage(Message.From, response);
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
             }
 
             Status = true;

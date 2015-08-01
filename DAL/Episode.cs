@@ -2,7 +2,7 @@
 
 namespace DAL
 {
-    public class Series : DbEntry
+    public class Episode : DbEntry
     {
         public int SiteId { get; set; }
         public string Title { get; set; }

@@ -12,7 +12,7 @@ namespace Scraper
         {
             using (var db = new AppDbContext())
             {
-                int lastId = db.Series?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
+                int lastId = db.Episodes?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
 
                 Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
                     @"http://www.lostfilm.tv/serials.php", lastId);
@@ -42,7 +42,7 @@ namespace Scraper
                         if (db.Shows.Any(s => s.Title == show.Title))
                         {
                             db.Shows.First(s => s.Title == show.Title)
-                                .SeriesList.AddRange(show.SeriesList);
+                                .Episodes.AddRange(show.Episodes);
                         }
                         else
                         {
@@ -50,7 +50,7 @@ namespace Scraper
                         }
 
                         Console.WriteLine(show.Title);
-                        foreach (var series in show.SeriesList)
+                        foreach (var series in show.Episodes)
                         {
                             Console.WriteLine('\t' + series.Title);
                         }

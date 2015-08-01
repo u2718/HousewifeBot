@@ -16,7 +16,7 @@ namespace HousewifeBot
                 User user;
                 try
                 {
-                    user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
+                    user = db.GetUserByTelegramId(Message.From.Id);
                 }
                 catch (Exception e)
                 {
@@ -33,9 +33,8 @@ namespace HousewifeBot
                         Username = Message.From.Username
                     };
 
-                    Program.Logger.Info($"{GetType().Name}: {user.FirstName} {user.LastName} is new User");
-
-                    Program.Logger.Debug($"{GetType().Name}: Adding user {user.FirstName} {user.LastName} to database");
+                    Program.Logger.Info($"{GetType().Name}: {user} is new User");
+                    Program.Logger.Debug($"{GetType().Name}: Adding user {user} to database");
                     try
                     {
                         db.Users.Add(user);
@@ -47,22 +46,22 @@ namespace HousewifeBot
                 }
                 else
                 {
-                    Program.Logger.Debug($"{GetType().Name}: User {user.FirstName} {user.LastName} is already exist");
+                    Program.Logger.Debug($"{GetType().Name}: User {user} is already exist");
                 }
 
                 List<Show> shows;
-                Program.Logger.Debug($"{GetType().Name}: Retrieving serials list");
+                Program.Logger.Debug($"{GetType().Name}: Retrieving shows list");
                 try
                 {
                     shows = db.Shows.ToList();
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while retrieving serials list", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while retrieving shows list", e);
                 }
 
                 List<Subscription> subscriptions;
-                Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user.FirstName} {user.LastName}");
+                Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user}");
                 try
                 {
                     subscriptions = db.Subscriptions.Where(s => s.User.Id == user.Id).ToList();
@@ -72,7 +71,7 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while retrieving subscriptions", e);
                 }
 
-                Program.Logger.Debug($"{GetType().Name}: Subscribing {user.FirstName} {user.LastName} to all serials");
+                Program.Logger.Debug($"{GetType().Name}: Subscribing {user} to all shows");
                 foreach (Show show in shows)
                 {
                     Subscription subscription = new Subscription
@@ -82,16 +81,15 @@ namespace HousewifeBot
                         SubscriptionDate = DateTime.Now
                     };
 
-                    if (!subscriptions.Any(s => Equals(s.Show, show)))
+                    if (subscriptions.Any(s => Equals(s.Show, show))) continue;
+
+                    try
                     {
-                        try
-                        {
-                            db.Subscriptions.Add(subscription);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new Exception($"{GetType().Name}: An error occurred while subscribing {user.FirstName} {user.LastName} to {show.OriginalTitle}", e);
-                        }
+                        db.Subscriptions.Add(subscription);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while subscribing {user} to {show.OriginalTitle}", e);
                     }
                 }
 
@@ -105,14 +103,14 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                 }
             }
-            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From.FirstName} {Message.From.LastName}");
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
             try
             {
                 TelegramApi.SendMessage(Message.From, "Вы, братишка, подписаны на все сериалы");
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
             }
 
             Status = true;

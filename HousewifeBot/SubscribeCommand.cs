@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using DAL;
-using Telegram;
 using User = DAL.User;
 
 namespace HousewifeBot
@@ -11,10 +9,10 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            string serialTitle;
+            string showTitle;
             if (string.IsNullOrEmpty(Arguments))
             {
-                Program.Logger.Debug($"{GetType().Name}: Sending 'Enter serial title' prompt");
+                Program.Logger.Debug($"{GetType().Name}: Sending 'Enter show title' prompt");
                 try
                 {
                     TelegramApi.SendMessage(Message.From, "Введите название сериала");
@@ -24,36 +22,36 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while sending prompt", e);
                 }
 
-                Program.Logger.Debug($"{GetType().Name}: Waiting for a message that contains serial title");
+                Program.Logger.Debug($"{GetType().Name}: Waiting for a message that contains show title");
                 try
                 {
-                    serialTitle = TelegramApi.WaitForMessage(Message.From).Text;
+                    showTitle = TelegramApi.WaitForMessage(Message.From).Text;
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while waiting for a message that contains serial title", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while waiting for a message that contains show title", e);
                 }
             }
             else
             {
-                serialTitle = Arguments;
+                showTitle = Arguments;
             }
 
-            Program.Logger.Info($"{GetType().Name}: {Message.From.FirstName} {Message.From.FirstName} is trying to subscribe to '{serialTitle}'");
+            Program.Logger.Info($"{GetType().Name}: {Message.From} is trying to subscribe to '{showTitle}'");
 
             string response;
             using (AppDbContext db = new AppDbContext())
             {
                 Show show;
-                Program.Logger.Debug($"{GetType().Name}: Searching serial {serialTitle} in database");
+                Program.Logger.Debug($"{GetType().Name}: Searching show {showTitle} in database");
                 try
                 {
-                    show = db.Shows.FirstOrDefault(s => s.Title.ToLower() == serialTitle.ToLower() ||
-                                                        s.OriginalTitle.ToLower() == serialTitle.ToLower());
+                    show = db.Shows.FirstOrDefault(s => s.Title.ToLower() == showTitle.ToLower() ||
+                                                        s.OriginalTitle.ToLower() == showTitle.ToLower());
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching serial {serialTitle} in database", e);
+                    throw new Exception($"{GetType().Name}: An error occurred while searching show {showTitle} in database", e);
                 }
 
                 if (show != null)
@@ -62,7 +60,7 @@ namespace HousewifeBot
                     User user;
                     try
                     {
-                        user = db.Users.FirstOrDefault(u => u.TelegramUserId == Message.From.Id);
+                        user = db.GetUserByTelegramId(Message.From.Id);
                     }
                     catch (Exception e)
                     {
@@ -83,11 +81,11 @@ namespace HousewifeBot
 
                     if (newUser)
                     {
-                        Program.Logger.Info($"{GetType().Name}: {user.FirstName} {user.LastName} is new User");
+                        Program.Logger.Info($"{GetType().Name}: {user} is new User");
                     }
                     else
                     {
-                        Program.Logger.Debug($"{GetType().Name}: User {user.FirstName} {user.LastName} is already exist");
+                        Program.Logger.Debug($"{GetType().Name}: User {user} is already exist");
                     }
 
                     bool subscriptionExists;
@@ -102,7 +100,7 @@ namespace HousewifeBot
                     }
                     if (subscriptionExists)
                     {
-                        Program.Logger.Info($"{GetType().Name}: User {Message.From.FirstName} {Message.From.LastName} is already subscribed to {show.OriginalTitle}");
+                        Program.Logger.Info($"{GetType().Name}: User {Message.From} is already subscribed to {show.OriginalTitle}");
                         response = $"Вы уже подписаны на сериал '{show.Title}'";
                     }
                     else
@@ -138,19 +136,19 @@ namespace HousewifeBot
                 }
                 else
                 {
-                    Program.Logger.Info($"{GetType().Name}: Serial {serialTitle} was not found");
-                    response = $"Сериал '{serialTitle}' не найден";
+                    Program.Logger.Info($"{GetType().Name}: Show {showTitle} was not found");
+                    response = $"Сериал '{showTitle}' не найден";
                 }
             }
 
-            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From.FirstName} {Message.From.LastName}");
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
             try
             {
                 TelegramApi.SendMessage(Message.From, response);
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From.FirstName} {Message.From.LastName}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
             }
 
             Status = true;

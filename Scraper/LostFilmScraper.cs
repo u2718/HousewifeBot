@@ -149,8 +149,8 @@ namespace Scraper
                     showDictionary.Add(showTitles[i], new Show { Title = showTitles[i] });
                 }
 
-                showDictionary[showTitles[i]].SeriesList.Add(
-                    new Series
+                showDictionary[showTitles[i]].Episodes.Add(
+                    new Episode
                     {
                         SiteId = seriesId,
                         Title = seriesTitles[i],
