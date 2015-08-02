@@ -14,6 +14,7 @@ namespace Scraper
         protected string ShowsListUrl;
 
         public int RetryCount { get; private set; }
+        public string SiteTitle { get; protected set; }
 
         protected Scraper(string url, string showsListUrl, long lastId)
         {
@@ -40,7 +41,6 @@ namespace Scraper
                     {
                         //Remove duplicates from series list
                         var seriesList = show.Value.Episodes.Except(showDictionary[show.Key].Episodes);
-
                         showDictionary[show.Key].Episodes.AddRange(seriesList);
                     }
                     else
