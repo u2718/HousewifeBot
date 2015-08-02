@@ -21,5 +21,13 @@ namespace DAL
         {
             return Users.FirstOrDefault(e => e.TelegramUserId == telegramId);
         }
+
+        public Show GetShowByTitle(string title)
+        {
+            title = title.ToLower();
+            return Shows.FirstOrDefault(s => s.Title.ToLower() == title ||
+                                             s.OriginalTitle.ToLower() == title ||
+                                             s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
+        }
     }
 }

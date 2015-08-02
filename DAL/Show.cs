@@ -2,15 +2,10 @@
 
 namespace DAL
 {
-    public sealed class Show : DbEntry
+    public class Show : DbEntry
     {
         public string Title { get; set; }
         public string OriginalTitle { get; set; }
-        public List<Episode> Episodes { get; set; }
-
-        public Show()
-        {
-             Episodes = new List<Episode>();
-        }
+        public virtual List<Episode> Episodes { get; set; } = new List<Episode>();
     }
 }

@@ -46,8 +46,7 @@ namespace HousewifeBot
                 Program.Logger.Debug($"{GetType().Name}: Searching show {showTitle} in database");
                 try
                 {
-                    show = db.Shows.FirstOrDefault(s => s.Title.ToLower() == showTitle.ToLower() ||
-                                                        s.OriginalTitle.ToLower() == showTitle.ToLower());
+                    show = db.GetShowByTitle(showTitle);
                 }
                 catch (Exception e)
                 {

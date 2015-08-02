@@ -87,10 +87,7 @@ namespace HousewifeBot
                         Show show;
                         try
                         {
-                            show = db.Shows.FirstOrDefault(s =>
-                                s.Title.ToLower() == showTitle.ToLower() ||
-                                s.OriginalTitle.ToLower() == showTitle.ToLower()
-                                );
+                            show = db.GetShowByTitle(showTitle);
                         }
                         catch (Exception e)
                         {

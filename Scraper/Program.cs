@@ -74,16 +74,16 @@ namespace Scraper
                 {
                     foreach (var showTuple in showsTuples)
                     {
-                        if (db.Shows.Any(s => s.Title == showTuple.Item2))
+                        if (db.Shows.Any(s => s.Title == showTuple.Item1))
                         {
-                            db.Shows.First(s => s.Title == showTuple.Item2).OriginalTitle = showTuple.Item1;
+                            db.Shows.First(s => s.Title == showTuple.Item1).OriginalTitle = showTuple.Item2;
                         }
                         else
                         {
                             db.Shows.Add(new Show
                             {
-                                Title = showTuple.Item2,
-                                OriginalTitle = showTuple.Item1
+                                Title = showTuple.Item1,
+                                OriginalTitle = showTuple.Item2
                             });
                             newShowsCount++;
                         }
