@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using DAL;
 using NLog;
+using System.Configuration;
 
 namespace Scraper
 {
@@ -12,9 +13,31 @@ namespace Scraper
     {
         public static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        private static int _updateInterval;
+        private static bool LoadSettings()
+        {
+            bool result = true;
+            try
+            {
+                _updateInterval = int.Parse(ConfigurationManager.AppSettings["UpdateInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading update interval");
+                result = false;
+            }
+
+            return result;
+        }
+
         static void Main()
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
+
+            if (!LoadSettings())
+            {
+                return;
+            }
 
             using (var db = new AppDbContext())
             {
@@ -129,7 +152,7 @@ namespace Scraper
                         Logger.Error(e, "An error occurred while saving changes to database");
                     }
 
-                    Thread.Sleep(TimeSpan.FromMinutes(10));
+                    Thread.Sleep(TimeSpan.FromMinutes(_updateInterval));
                 }
             }
         }
