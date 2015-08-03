@@ -134,8 +134,8 @@ namespace HousewifeBot
                 List<Notification> notifications;
                 try
                 {
-                    notifications = db.Notifications.Where(n => !n.Notified)
-                        .Select(n => n)
+                    notifications = db.Notifications
+                        .Where(n => !n.Notified)
                         .ToList();
                 }
                 catch (Exception e)

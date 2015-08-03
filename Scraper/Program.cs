@@ -130,7 +130,7 @@ namespace Scraper
                         }
                         newEpisodesCount += show.Episodes.Count;
                         
-                        Logger.Info($"{show.OriginalTitle} - {string.Join(", ", show.Episodes)}");
+                        Logger.Info($"{show.Title} - {string.Join(", ", show.Episodes.Select(e => e.Title))}");
                     }
 
                     if (newShowsCount > 0)
