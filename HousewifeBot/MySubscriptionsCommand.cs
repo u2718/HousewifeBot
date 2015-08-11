@@ -11,7 +11,7 @@ namespace HousewifeBot
     {
         private const int MaxPageSize = 50;
 
-        public override bool Execute()
+        public override void Execute()
         {
             User user;
             List<Show> userShows = null;
@@ -63,7 +63,7 @@ namespace HousewifeBot
                 }
 
                 Status = true;
-                return true;
+                return;
             }
 
             List<string> pagesList = new List<string>();
@@ -127,7 +127,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

@@ -7,7 +7,7 @@ namespace HousewifeBot
 {
     public class SubscribeAllCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             using (AppDbContext db = new AppDbContext())
             {
@@ -114,7 +114,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

@@ -8,7 +8,7 @@ namespace HousewifeBot
 {
     public class UnsubscribeAllCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             string response;
             using (var db = new AppDbContext())
@@ -79,7 +79,6 @@ namespace HousewifeBot
                     {
                         Program.Logger.Debug($"{GetType().Name}: {user} cancel command");
                         Status = true;
-                        return true;
                     }
 
                     Program.Logger.Debug($"{GetType().Name}: Deleting notifications for all subscriptions");
@@ -130,7 +129,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

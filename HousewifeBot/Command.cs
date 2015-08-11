@@ -42,7 +42,7 @@ namespace HousewifeBot
         protected Command()
         { }
 
-        abstract public bool Execute();
+        abstract public void Execute();
 
         public static Command CreateCommand(string command)
         {
