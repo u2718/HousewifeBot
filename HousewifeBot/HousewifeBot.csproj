@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HelpCommand.cs" />
+    <Compile Include="MySubscriptionsCommand.cs" />
     <Compile Include="StartCommand.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="Notifier.cs" />
