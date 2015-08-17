@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HousewifeBot", "HousewifeBot\HousewifeBot.csproj", "{880149B4-B6EA-4226-B22A-D59DC10CC30B}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DAL", "DAL\DAL.csproj", "{7F43E0E2-E657-47CA-9985-01E2BB6425D3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telegram", "Telegram\Telegram.csproj", "{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TorrentDownloader", "TorrentDownloader\TorrentDownloader.csproj", "{4013AE89-962E-4803-9A17-CEC42F72BA49}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC113461-4CB9-4D77-88FA-E58F4D36EAA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4013AE89-962E-4803-9A17-CEC42F72BA49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4013AE89-962E-4803-9A17-CEC42F72BA49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4013AE89-962E-4803-9A17-CEC42F72BA49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4013AE89-962E-4803-9A17-CEC42F72BA49}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
