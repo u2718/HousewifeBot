@@ -3,19 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using DAL;
+using HtmlAgilityPack;
 
 namespace TorrentDownloader
 {
     public class LostFilmTorrentDownloader : ITorrentDownloader
     {
-        const string LoginUrl = @"https://login1.bogi.ru/login.php?referer=https%3A%2F%2Fwww.lostfilm.tv%2F";
-      
+        public struct TorrentDescription
+        {
+            public Uri TorrentUri;
+            public string Description;
+        }
+
+        private const string LoginUrl = @"https://login1.bogi.ru/login.php?referer=https%3A%2F%2Fwww.lostfilm.tv%2F";
+        private const string DetailsUrl = @"http://www.lostfilm.tv/details.php?id={0}";
+        private const string DownloadsUrl = @"https://www.lostfilm.tv/nrdr.php?c={0}&s={1}&e={2}";
+
+        private HttpClient _client;
+
         public List<Uri> GetEpisodeTorrents(Episode episode, string login, string password)
         {
-            HttpClient client = Login(login, password);
-            throw new NotImplementedException();
+            _client = Login(login, password);
+            // var r = s.GetAsync("").Result.Content.ReadAsStringAsync().Result;
+            string detailsContent = _client.GetAsync(string.Format(DetailsUrl, episode.SiteId)).Result.Content.ReadAsStringAsync().Result;
+
+            Match parametersMatch = Regex.Match(detailsContent, @"ShowAllReleases\(\'(.+?)\',\s*\'(.+?)\',\s*\'(.+?)\'\)");
+
+            IEnumerable<TorrentDescription> torrents = GetTorrents(parametersMatch.Groups[1].Value, parametersMatch.Groups[2].Value, parametersMatch.Groups[3].Value);
+
+            return torrents.Select(t => t.TorrentUri).ToList();
         }
 
         /// <summary>
@@ -72,6 +91,32 @@ namespace TorrentDownloader
 
             client.SendAsync(request).Wait();
             return client;
+        }
+
+        private IEnumerable<TorrentDescription> GetTorrents(string showId, string seasonNumber, string episodeNumber)
+        {
+            string downloadsContent = Encoding.GetEncoding(1251).GetString(_client.GetAsync(string.Format(DownloadsUrl, showId, seasonNumber, episodeNumber)).Result.Content.ReadAsByteArrayAsync().Result);
+            HtmlDocument document = new HtmlDocument();
+            document.LoadHtml(downloadsContent);
+
+            List<HtmlNode> torrentNodes = document.DocumentNode
+                .SelectNodes("//div//table//tr//td//span")
+                .Where(n => n.Element("div") != null).ToList();
+            List<TorrentDescription> torrents = new List<TorrentDescription>();
+            foreach (var node in torrentNodes)
+            {
+                string description = node.InnerText;
+                description = description.Substring(0, description.IndexOf('\n'));
+                string uri = node.Element("div").Element("nobr").Element("a").InnerHtml;
+
+                torrents.Add(new TorrentDescription()
+                {
+                    TorrentUri = new Uri(uri),
+                    Description = description
+                });
+            }
+
+            return torrents;
         }
     }
 }
