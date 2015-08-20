@@ -10,7 +10,7 @@ using HtmlAgilityPack;
 
 namespace TorrentDownloader
 {
-    public class LostFilmTorrentDownloader : ITorrentDownloader
+    public class LostFilmTorrentGetter : ITorrentGetter
     {
         public struct TorrentDescription
         {
@@ -118,5 +118,7 @@ namespace TorrentDownloader
 
             return torrents;
         }
+
+
     }
 }

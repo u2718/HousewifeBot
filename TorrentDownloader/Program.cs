@@ -8,8 +8,11 @@ namespace TorrentDownloader
     {
         static void Main(string[] args)
         {
-            ITorrentDownloader torrentDownloader = new LostFilmTorrentDownloader();
-            List<Uri> torrents = torrentDownloader.GetEpisodeTorrents(new Episode() { SiteId = 14949 }, "", "");
+            ITorrentDownloader downloader = new UTorrentDownloader();
+            ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
+
+            List<Uri> torrents = torrentGetter.GetEpisodeTorrents(new Episode() { SiteId = 14949 }, "", "");
+            torrents.ForEach(t => downloader.Download(t, new Uri("http://localhost:8081/gui/"), ""));
         }
     }
 }
