@@ -4,24 +4,27 @@ namespace HousewifeBot
 {
     class StartCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
+            Program.Logger.Debug($"{GetType().Name}: Sending help message to {Message.From}");
+
             try
             {
                 TelegramApi.SendMessage(Message.From, $"Шалом, {Message.From.FirstName}. \n"+ 
                 "Список команд: \n" +
-                "/serials - вывести список всех сериалов \n" +
+                "/shows - вывести список всех сериалов \n" +
                 "/subscribe - подписаться на сериал \n" +
                 "/unsubscribe - отписаться от сериала \n" +
                 "/unsubscribe_all - отписаться от всех сериалов \n" +
                 "/help - справка"
                 );
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return false;
+                throw new Exception($"{GetType().Name}: An error occurred while sending help message to {Message.From}", e);
             }
-            return true;
+
+            Status = true;
         }
     }
 }

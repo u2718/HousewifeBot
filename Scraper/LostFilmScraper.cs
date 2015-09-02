@@ -16,7 +16,7 @@ namespace Scraper
 
         public LostFilmScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
-
+            SiteTitle = "LostFilm.TV";
         }
 
         public override List<Tuple<string, string>> LoadShows()
@@ -88,21 +88,18 @@ namespace Scraper
             }
 
             var showTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
-                ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
-                ?.ToArray();
+                ?.Select(s => s?.Attributes["title"]?.Value?.Trim()).ToArray();
 
             var seriesTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //span[@class='torrent_title']//b")
-                ?.Select(s => s?.InnerText?.Trim())
-                ?.ToArray();
+                ?.Select(s => s?.InnerText?.Trim()).ToArray();
 
             var seriesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
                 //a[@class='a_details']")
                 ?.Select(
                     s => s?.Attributes["href"] != null ?
                     IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
-                    null)
-                ?.ToArray();
+                    null).ToArray();
 
             if (showTitles == null || seriesTitles == null || seriesIds == null)
             {
@@ -117,7 +114,7 @@ namespace Scraper
             bool stop = false;
             for (int i = 0; i < showTitles.Length; i++)
             {
-                int seriesId = -1;
+                int seriesId;
                 try
                 {
                     seriesId = int.Parse(seriesIds[i]);
@@ -149,8 +146,8 @@ namespace Scraper
                     showDictionary.Add(showTitles[i], new Show { Title = showTitles[i] });
                 }
 
-                showDictionary[showTitles[i]].SeriesList.Add(
-                    new Series
+                showDictionary[showTitles[i]].Episodes.Add(
+                    new Episode
                     {
                         SiteId = seriesId,
                         Title = seriesTitles[i],

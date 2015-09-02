@@ -1,25 +1,92 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Telegram;
-
+using System.Configuration;
 namespace HousewifeBot
 {
     class Program
     {
-        public static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        public static readonly Logger Logger = LogManager.GetLogger("Common");
+
+        private static string _token;
+        private static int _updateNotificationsInterval;
+        private static int _sendNotificationsInterval;
+        private static int _retryPollingDelay;
+
+        static bool LoadSettings()
+        {
+            bool result = true;
+            try
+            {
+                _token = ConfigurationManager.AppSettings["TelegramToken"];
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading token");
+                result = false;
+            }
+
+            try
+            {
+                _updateNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["UpdateNotificationsInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading update notifications interval");
+                result = false;
+            }
+
+            try
+            {
+                _sendNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendNotificationsInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading send notifications interval");
+                result = false;
+            }
+
+            try
+            {
+                _retryPollingDelay = int.Parse(ConfigurationManager.AppSettings["RetryPollingDelay"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading retry polling delay");
+                result = false;
+            }
+
+            return result;
+        }
+
+        private static void StartPolling(TelegramApi tgApi)
+        {
+            Logger.Debug("Starting polling");
+            Task pollingTask = tgApi.StartPolling();
+
+            pollingTask.ContinueWith(e =>
+            {
+                Logger.Error(e.Exception, "An error occurred while retrieving updates");
+                Thread.Sleep(_retryPollingDelay);
+                StartPolling(tgApi);
+            },
+          TaskContinuationOptions.OnlyOnFaulted); 
+        }
 
         static void Main()
         {
             Logger.Info($"HousewifeBot started: {Assembly.GetEntryAssembly().Location}");
-
-            var token = File.ReadAllText(@"token.txt");
-            TelegramApi tg = new TelegramApi(token);
+            if (!LoadSettings())
+            {
+                return;
+            }
+            
+            TelegramApi tg = new TelegramApi(_token);
             try
             {
                 Logger.Debug("Executing GetMe");
@@ -33,8 +100,6 @@ namespace HousewifeBot
                 return;
             }
 
-            tg.StartPolling();
-
             Notifier notifier = new Notifier(tg);
             var updateNotificationsTask = new Task(
                 () =>
@@ -42,7 +107,7 @@ namespace HousewifeBot
                     while (true)
                     {
                         notifier.UpdateNotifications();
-                        Thread.Sleep(5000);
+                        Thread.Sleep(_updateNotificationsInterval);
                     }
                 }
                 );
@@ -54,7 +119,7 @@ namespace HousewifeBot
                     while (true)
                     {
                         notifier.SendNotifications();
-                        Thread.Sleep(10000);
+                        Thread.Sleep(_sendNotificationsInterval);
                     }
                 }
                 );
@@ -63,6 +128,7 @@ namespace HousewifeBot
             var processingCommandUsers = new ConcurrentDictionary<User, bool>();
             Regex commandRegex = new Regex(@"(/\w+)\s*");
 
+            StartPolling(tg);
             while (true)
             {
                 foreach (var update in tg.Updates)
@@ -81,13 +147,23 @@ namespace HousewifeBot
                     update.Value.TryDequeue(out message);
 
                     Logger.Debug($"Received message '{message.Text}' from " +
-                                 $"{message.From.FirstName} {message.From.LastName}");
-                    string commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
+                                 $"{message.From}");
 
-                    Logger.Debug($"Creating command object for '{commandTitle}'");
+                    string commandTitle;
+                    try
+                    {
+                        commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, "An error occurred while parsing command title");
+                        continue;
+                    }
+
+                    Logger.Debug($"Creating command object for '{message.Text}'");
                     var command = Command.CreateCommand(commandTitle);
                     Logger.Info($"Received {command.GetType().Name} from " +
-                                $"{message.From.FirstName} {message.From.LastName}");
+                                $"{message.From}");
 
                     command.TelegramApi = tg;
                     command.Message = message;
@@ -114,7 +190,7 @@ namespace HousewifeBot
                     {
                         processingCommandUsers[update.Key] = false;
                         Logger.Debug($"{command.GetType().Name} from " +
-                                     $"{message.From.FirstName} {message.From.LastName} succeeded");
+                                     $"{message.From} {(command.Status ? "succeeded" : "failed")}");
                     });
                 }
                 Thread.Sleep(200);

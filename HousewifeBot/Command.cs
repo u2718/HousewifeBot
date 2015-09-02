@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 using Telegram;
 
 namespace HousewifeBot
@@ -13,9 +14,15 @@ namespace HousewifeBot
         {
             get
             {
-                if (string.IsNullOrEmpty(_arguments))
+                if (!string.IsNullOrEmpty(_arguments)) return _arguments;
+
+                try
                 {
                     _arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Error while parsing command string", e);
                 }
                 return _arguments;
             }
@@ -23,6 +30,8 @@ namespace HousewifeBot
 
         public TelegramApi TelegramApi { get; set; }
         public Message Message { get; set; }
+
+        public bool Status { get; protected set; } = false;
 
         protected Command(TelegramApi telegramApi, Message message)
         {
@@ -33,7 +42,7 @@ namespace HousewifeBot
         protected Command()
         { }
 
-        abstract public bool Execute();
+        abstract public void Execute();
 
         public static Command CreateCommand(string command)
         {
@@ -43,8 +52,8 @@ namespace HousewifeBot
                     return new StartCommand();
                 case @"/help":
                     return new HelpCommand();                
-                case @"/serials":
-                    return new SerialsCommand();
+                case @"/shows":
+                    return new ShowsCommand();
                 case @"/subscribe":
                     return new SubscribeCommand();
                 case @"/subscribe_all":
@@ -53,6 +62,8 @@ namespace HousewifeBot
                     return new UnsubscribeCommand();
                 case @"/unsubscribe_all":
                     return new UnsubscribeAllCommand();
+                case @"/my_subscriptions":
+                    return new MySubscriptionsCommand();
                 default:
                     return new UnknownCommand();
             }

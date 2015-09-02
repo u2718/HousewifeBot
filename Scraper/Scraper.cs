@@ -14,6 +14,7 @@ namespace Scraper
         protected string ShowsListUrl;
 
         public int RetryCount { get; private set; }
+        public string SiteTitle { get; protected set; }
 
         protected Scraper(string url, string showsListUrl, long lastId)
         {
@@ -39,9 +40,8 @@ namespace Scraper
                     if (showDictionary.ContainsKey(show.Key))
                     {
                         //Remove duplicates from series list
-                        var seriesList = show.Value.SeriesList.Except(showDictionary[show.Key].SeriesList);
-
-                        showDictionary[show.Key].SeriesList.AddRange(seriesList);
+                        var seriesList = show.Value.Episodes.Except(showDictionary[show.Key].Episodes);
+                        showDictionary[show.Key].Episodes.AddRange(seriesList);
                     }
                     else
                     {
@@ -55,10 +55,10 @@ namespace Scraper
             if (result.Count != 0)
             {
                 LastId = result.Aggregate(
-                    new List<Series>(),
+                    new List<Episode>(),
                     (list, show) =>
                     {
-                        list.AddRange(show.SeriesList);
+                        list.AddRange(show.Episodes);
                         return list;
                     }
                     ).OrderByDescending(s => s.SiteId).First().SiteId;

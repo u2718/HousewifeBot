@@ -19,6 +19,5 @@ namespace Telegram
         
         [JsonProperty (PropertyName = "text")]
         public string Text { get; set; }
-
     }
 }

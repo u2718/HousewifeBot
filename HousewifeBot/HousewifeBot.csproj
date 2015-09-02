@@ -46,6 +46,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -56,12 +57,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HelpCommand.cs" />
+    <Compile Include="MySubscriptionsCommand.cs" />
     <Compile Include="StartCommand.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="Notifier.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerialsCommand.cs" />
+    <Compile Include="ShowsCommand.cs" />
     <Compile Include="SubscribeAllCommand.cs" />
     <Compile Include="SubscribeCommand.cs" />
     <Compile Include="UnknownCommand.cs" />
@@ -73,6 +75,9 @@
     <Content Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="Local.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
