@@ -68,15 +68,14 @@ namespace HousewifeBot
         {
             Logger.Debug("Starting polling");
             Task pollingTask = tgApi.StartPolling();
+
             pollingTask.ContinueWith(e =>
             {
                 Logger.Error(e.Exception, "An error occurred while retrieving updates");
-                new Timer(o =>
-                {
-                    StartPolling(tgApi);
-                }, null, _retryPollingDelay, -1);
+                Thread.Sleep(_retryPollingDelay);
+                StartPolling(tgApi);
             },
-          TaskContinuationOptions.OnlyOnFaulted);
+          TaskContinuationOptions.OnlyOnFaulted); 
         }
 
         static void Main()
@@ -149,9 +148,19 @@ namespace HousewifeBot
 
                     Logger.Debug($"Received message '{message.Text}' from " +
                                  $"{message.From}");
-                    string commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
 
-                    Logger.Debug($"Creating command object for '{commandTitle}'");
+                    string commandTitle;
+                    try
+                    {
+                        commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, "An error occurred while parsing command title");
+                        continue;
+                    }
+
+                    Logger.Debug($"Creating command object for '{message.Text}'");
                     var command = Command.CreateCommand(commandTitle);
                     Logger.Info($"Received {command.GetType().Name} from " +
                                 $"{message.From}");

@@ -6,7 +6,7 @@ namespace HousewifeBot
 {
     public class UnsubscribeCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             string response;
 
@@ -176,7 +176,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

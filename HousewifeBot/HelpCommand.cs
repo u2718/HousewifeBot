@@ -4,7 +4,7 @@ namespace HousewifeBot
 {
     class HelpCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             Program.Logger.Debug($"{GetType().Name}: Sending help message to {Message.From}");
             try
@@ -23,7 +23,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

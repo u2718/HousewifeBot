@@ -42,7 +42,7 @@ namespace HousewifeBot
         protected Command()
         { }
 
-        abstract public bool Execute();
+        abstract public void Execute();
 
         public static Command CreateCommand(string command)
         {
@@ -62,6 +62,8 @@ namespace HousewifeBot
                     return new UnsubscribeCommand();
                 case @"/unsubscribe_all":
                     return new UnsubscribeAllCommand();
+                case @"/my_subscriptions":
+                    return new MySubscriptionsCommand();
                 default:
                     return new UnknownCommand();
             }

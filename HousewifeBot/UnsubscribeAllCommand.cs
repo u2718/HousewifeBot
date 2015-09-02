@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Linq;
 using DAL;
+using Telegram;
+using User = DAL.User;
 
 namespace HousewifeBot
 {
     public class UnsubscribeAllCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             string response;
             using (var db = new AppDbContext())
@@ -49,6 +51,34 @@ namespace HousewifeBot
                         Program.Logger.Debug($"{GetType().Name}: {user} has no subscriptions");
                         response = "Вы не подписаны ни на один сериал";
                         break;
+                    }
+
+                    Program.Logger.Debug($"{GetType().Name}: Sending the confirmation message to {user}");
+                    try
+                    {
+                        TelegramApi.SendMessage(Message.From,
+                            "Вы действительно хотите отписаться от всех сериалов?\n/yes /no");
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while sending the confirmation message to {user}", e);
+                    }
+
+                    Program.Logger.Debug($"{GetType().Name}: Waiting for a message that contains confirmation");
+                    Message msg;
+                    try
+                    {
+                        msg = TelegramApi.WaitForMessage(Message.From);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while waiting for a message that contains confirmation", e);
+                    }
+
+                    if (msg.Text.ToLower() != "/yes")
+                    {
+                        Program.Logger.Debug($"{GetType().Name}: {user} cancel command");
+                        Status = true;
                     }
 
                     Program.Logger.Debug($"{GetType().Name}: Deleting notifications for all subscriptions");
@@ -99,7 +129,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

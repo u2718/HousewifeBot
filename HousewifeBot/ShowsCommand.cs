@@ -18,7 +18,7 @@ namespace HousewifeBot
         {
         }
 
-        public override bool Execute()
+        public override void Execute()
         {
             Program.Logger.Debug($"{GetType().Name}: Parsing message size. Arguments: {Arguments}");
             int messageSize;
@@ -101,7 +101,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }

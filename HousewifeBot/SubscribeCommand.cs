@@ -7,7 +7,7 @@ namespace HousewifeBot
 {
     public class SubscribeCommand : Command
     {
-        public override bool Execute()
+        public override void Execute()
         {
             string showTitle;
             if (string.IsNullOrEmpty(Arguments))
@@ -151,7 +151,6 @@ namespace HousewifeBot
             }
 
             Status = true;
-            return true;
         }
     }
 }
