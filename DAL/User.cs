@@ -9,11 +9,14 @@ namespace DAL
         public string LastName { get; set; }
         public string Username { get; set; }
 
-        public virtual ICollection<Subscription> Subscriptions { get; set; }
+        public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 
-        public User()
+        public override string ToString()
         {
-            Subscriptions = new List<Subscription>();
+            return
+                (string.IsNullOrEmpty(FirstName) ? "" : FirstName) +
+                (string.IsNullOrEmpty(LastName) ? "" : $" {LastName}") +
+                (string.IsNullOrEmpty(Username) ? "" : $" ({Username})");
         }
     }
 }

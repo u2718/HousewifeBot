@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using DAL;
 
 namespace HousewifeBot
@@ -7,36 +8,97 @@ namespace HousewifeBot
     {
         public override bool Execute()
         {
-            string response = string.Empty;
+            string response;
             using (var db = new AppDbContext())
             {
                 do
                 {
-                    User user = db.Users.FirstOrDefault(s => s.TelegramUserId == Message.From.Id);
+                    User user;
+                    Program.Logger.Debug(
+                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
+                    try
+                    {
+                        user = db.GetUserByTelegramId(Message.From.Id);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
+                    }
+
                     if (user == null)
                     {
-                        response = $"Вы не подписаны ни на один сериал";
+                        Program.Logger.Debug($"{GetType().Name}: User with TelegramId: {Message.From.Id} is not found");
+                        response = "Вы не подписаны ни на один сериал";
                         break;
                     }
 
-                    var subscriptions = db.Subscriptions.Where(s => s.User.Id == user.Id);
+
+                    IQueryable<Subscription> subscriptions;
+                    Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user}");
+                    try
+                    {
+                        subscriptions = db.Subscriptions.Where(s => s.User.Id == user.Id);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while retrieving subscriptions of {user}", e);
+                    }
+
                     if (!subscriptions.Any())
                     {
-                        response = $"Вы не подписаны ни на один сериал";
+                        Program.Logger.Debug($"{GetType().Name}: {user} has no subscriptions");
+                        response = "Вы не подписаны ни на один сериал";
                         break;
                     }
 
-                    db.Notifications.RemoveRange(
-                        db.Notifications.Where(n => subscriptions.Any(s => s.Id == n.Subscription.Id))
-                        );
-                    db.Subscriptions.RemoveRange(subscriptions);
+                    Program.Logger.Debug($"{GetType().Name}: Deleting notifications for all subscriptions");
+                    try
+                    {
+                        db.Notifications.RemoveRange(
+                            db.Notifications.Where(n => subscriptions.Any(s => s.Id == n.Subscription.Id))
+                            );
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception(
+                                $"{GetType().Name}: An error occurred while deleting notifications for all subscription", e);
+                    }
 
-                    response = $"Вы отписались от всех сериалов";
+                    Program.Logger.Debug($"{GetType().Name}: Deleting all subscriptions");
+                    try
+                    {
+                        db.Subscriptions.RemoveRange(subscriptions);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while deleting all subscriptions", e);
+                    }
+
+                    response = "Вы отписались от всех сериалов";
                 } while (false);
-                db.SaveChanges();
+
+                Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
+                try
+                {
+                    db.SaveChanges();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
+                }
             }
 
-            TelegramApi.SendMessage(Message.From, response);
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
+            try
+            {
+                TelegramApi.SendMessage(Message.From, response);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
+            }
+
+            Status = true;
             return true;
         }
     }

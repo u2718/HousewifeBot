@@ -1,27 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using DAL;
 using Telegram;
 
 namespace HousewifeBot
 {
-    class SerialsCommand : Command
+    class ShowsCommand : Command
     {
         private const int MaxPageSize = 50;
 
-        public SerialsCommand(TelegramApi telegramApi, Message message) : base(telegramApi, message)
+        public ShowsCommand(TelegramApi telegramApi, Message message) : base(telegramApi, message)
         {
         }
 
-        public SerialsCommand()
+        public ShowsCommand()
         {
         }
 
         public override bool Execute()
         {
-            Program.Logger.Debug($"SerialsCommand: Parsing message size. Arguments: {Arguments}");
+            Program.Logger.Debug($"{GetType().Name}: Parsing message size. Arguments: {Arguments}");
             int messageSize;
             int.TryParse(Arguments, out messageSize);
             if (messageSize == 0)
@@ -29,40 +28,42 @@ namespace HousewifeBot
                 messageSize = MaxPageSize;
             }
             messageSize = Math.Min(messageSize, MaxPageSize);
-            Program.Logger.Debug($"SerialsCommand: Message size: {messageSize}");
+            Program.Logger.Debug($"{GetType().Name}: Message size: {messageSize}");
 
-            List<string> serials;
-            try
+            List<string> shows;
+
+            Program.Logger.Debug($"{GetType().Name}: Retrieving shows list");
+            using (var db = new AppDbContext())
             {
-                Program.Logger.Debug($"SerialsCommand: Retrieving serials list");
-                using (var db = new AppDbContext())
+                try
                 {
-                    serials = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name}: An error occurred while retrieving shows list", e);
                 }
             }
-            catch (Exception e)
-            {
-                throw new Exception("SerialsCommand: An error occurred while retrieving serials list", e);
-            }
+
 
             List<string> pagesList = new List<string>();
-            for (int i = 0; i < serials.Count; i += messageSize)
+            for (int i = 0; i < shows.Count; i += messageSize)
             {
-                if (i > serials.Count)
+                if (i > shows.Count)
                 {
                     break;
                 }
 
-                int count = Math.Min(serials.Count - i, messageSize);
+                int count = Math.Min(shows.Count - i, messageSize);
                 pagesList.Add(
-                    serials.GetRange(i, count)
+                    shows.GetRange(i, count)
                     .Aggregate("", (s, s1) => s + "\n" + s1)
                     );
             }
 
             try
             {
-                Program.Logger.Debug("SerialsCommand: Sending serials list");
+                Program.Logger.Debug($"{GetType().Name}: Sending shows list");
 
                 for (int i = 0; i < pagesList.Count; i++)
                 {
@@ -96,9 +97,10 @@ namespace HousewifeBot
             }
             catch (Exception e)
             {
-                throw new Exception("SerialsCommand: An error occurred while sending serials list", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending shows list", e);
             }
 
+            Status = true;
             return true;
         }
     }
