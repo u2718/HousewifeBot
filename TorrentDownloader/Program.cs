@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 using DAL;
 
 namespace TorrentDownloader
@@ -11,8 +13,30 @@ namespace TorrentDownloader
             ITorrentDownloader downloader = new UTorrentDownloader();
             ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
 
-            List<Uri> torrents = torrentGetter.GetEpisodeTorrents(new Episode() { SiteId = 14949 }, "", "");
-            torrents.ForEach(t => downloader.Download(t, new Uri("http://localhost:8081/gui/"), ""));
+            StreamWriter sw = new StreamWriter(@"E:\torrents.txt");
+
+            using (AppDbContext db = new AppDbContext())
+            {
+                List<TorrentDescription> torrents = new List<TorrentDescription>();
+                foreach (var episode in db.Episodes)
+                {
+                    List<TorrentDescription> t; 
+                    try
+                    {
+                        t = torrentGetter.GetEpisodeTorrents(episode, "", "");
+                        torrents.AddRange(t);
+                        t.ForEach(a => sw.Write($"EpisodeId: {episode.SiteId}; Quality: {a.Quality}; Size: {a.Size}; Description: {a.Description}\n"));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                     
+                    
+                    
+                }
+            }
+            //torrents.ForEach(t => downloader.Download(t, new Uri("http://localhost:8081/gui/"), ""));
         }
     }
 }
