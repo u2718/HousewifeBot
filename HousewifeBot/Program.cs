@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using NLog;
 using Telegram;
 using System.Configuration;
+using System.Data.Entity;
+using DAL;
+using User = Telegram.User;
+
 namespace HousewifeBot
 {
     class Program
@@ -84,7 +88,7 @@ namespace HousewifeBot
             if (!LoadSettings())
             {
                 return;
-            }
+            }   
             
             TelegramApi tg = new TelegramApi(_token);
             try
@@ -99,6 +103,8 @@ namespace HousewifeBot
                 Logger.Error(e);
                 return;
             }
+
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<AppDbContext, DAL.Migrations.Configuration>());
 
             Notifier notifier = new Notifier(tg);
             var updateNotificationsTask = new Task(

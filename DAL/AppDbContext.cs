@@ -11,6 +11,7 @@ namespace DAL
         public DbSet<User> Users { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Settings> Settings { get; set; }
 
         public AppDbContext() : base("DbConnection")
         {
