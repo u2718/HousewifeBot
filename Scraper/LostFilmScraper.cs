@@ -125,7 +125,7 @@ namespace Scraper
                     continue;
                 }
 
-                if (seriesId == LastId)
+                if (seriesId <= LastId)
                 {
                     stop = true;
                     break;
