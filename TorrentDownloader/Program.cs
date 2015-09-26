@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Configuration;
 using System.Linq;
 using System.Threading;
 using DAL;
@@ -12,7 +11,7 @@ namespace TorrentDownloader
         static void Main(string[] args)
         {
             ITorrentDownloader downloader = new UTorrentDownloader();
-
+            int updateInterval = int.Parse(ConfigurationManager.AppSettings["UpdateInterval"]) * 1000;
             do
             {
                 using (AppDbContext db = new AppDbContext())
@@ -34,7 +33,7 @@ namespace TorrentDownloader
                         db.SaveChanges();
                     }
                 }
-                Thread.Sleep(10000);
+                Thread.Sleep(updateInterval);
             } while (true);
         }
     }
