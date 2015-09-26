@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TorrentDownloader
+namespace HousewifeBot
 {
     public class TorrentDescription
     {

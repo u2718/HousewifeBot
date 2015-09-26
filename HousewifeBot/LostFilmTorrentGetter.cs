@@ -8,13 +8,14 @@ using System.Text.RegularExpressions;
 using DAL;
 using HtmlAgilityPack;
 
-namespace TorrentDownloader
+namespace HousewifeBot
 {
     public class LostFilmTorrentGetter : ITorrentGetter
     {
         private const string LoginUrl = @"https://login1.bogi.ru/login.php?referer=https%3A%2F%2Fwww.lostfilm.tv%2F";
         private const string DetailsUrl = @"http://www.lostfilm.tv/details.php?id={0}";
         private const string DownloadsUrl = @"https://www.lostfilm.tv/nrdr.php?c={0}&s={1}&e={2}";
+        private readonly char[] CharsToReplace = {' ', '-'};
 
         private HttpClient _client;
 
@@ -110,14 +111,20 @@ namespace TorrentDownloader
                 Match sizeMatch = Regex.Match(description, @"Размер: (.+)\.");
                 Match qualityMatch = Regex.Match(description, @"Видео: (.+?)\.");
 
-                torrents.Add(new TorrentDescription()
+                TorrentDescription torrentDescription = new TorrentDescription()
                 {
                     TorrentUri = new Uri(uri),
                     Description = description,
                     Size = sizeMatch.Success ? sizeMatch.Groups[1].Value : string.Empty,
                     Quality = qualityMatch.Success ? qualityMatch.Groups[1].Value : string.Empty
+                };
 
-                });
+                foreach (char c in CharsToReplace)
+                {
+                    torrentDescription.Quality = torrentDescription.Quality.Replace(c, '_');
+                }
+
+                torrents.Add(torrentDescription);
             }
 
             return torrents;

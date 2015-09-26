@@ -31,5 +31,10 @@ namespace DAL
                                              s.OriginalTitle.ToLower() == title ||
                                              s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
         }
+
+        public Settings GetSettingsByUser(User user)
+        {
+            return Settings.FirstOrDefault(s => s.User.Id == user.Id);
+        }
     }
 }

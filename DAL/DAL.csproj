@@ -60,6 +60,10 @@
     <Compile Include="Migrations\201509251658334_AddSettings.Designer.cs">
       <DependentUpon>201509251658334_AddSettings.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201509261000482_AddDownloadTask.cs" />
+    <Compile Include="Migrations\201509261000482_AddDownloadTask.Designer.cs">
+      <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -81,6 +85,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201509251658334_AddSettings.resx">
       <DependentUpon>201509251658334_AddSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201509261000482_AddDownloadTask.resx">
+      <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
