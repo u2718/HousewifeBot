@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="AppDbContext.cs" />
     <Compile Include="DbEntry.cs" />
+    <Compile Include="DownloadTask.cs" />
     <Compile Include="Migrations\201508012136202_InitialCreate.cs" />
     <Compile Include="Migrations\201508012136202_InitialCreate.Designer.cs">
       <DependentUpon>201508012136202_InitialCreate.cs</DependentUpon>
