@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using DAL;
 
@@ -11,32 +12,30 @@ namespace TorrentDownloader
         static void Main(string[] args)
         {
             ITorrentDownloader downloader = new UTorrentDownloader();
-            ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
 
-            StreamWriter sw = new StreamWriter(@"E:\torrents.txt");
-
-            using (AppDbContext db = new AppDbContext())
+            do
             {
-                List<TorrentDescription> torrents = new List<TorrentDescription>();
-                foreach (var episode in db.Episodes)
+                using (AppDbContext db = new AppDbContext())
                 {
-                    List<TorrentDescription> t; 
-                    try
+                    var settings = db.Settings.ToList();
+                    var downloadTasks = db.DownloadTasks
+                        .Where(d => !d.DownloadStarted)
+                        .ToList();
+
+                    foreach (var downloadTask in downloadTasks)
                     {
-                        t = torrentGetter.GetEpisodeTorrents(episode, "", "");
-                        torrents.AddRange(t);
-                        t.ForEach(a => sw.Write($"EpisodeId: {episode.SiteId}; Quality: {a.Quality}; Size: {a.Size}; Description: {a.Description}\n"));
+                        var setting = settings.FirstOrDefault(s => s.User.Id == downloadTask.User.Id);
+                        if (setting == null)
+                        {
+                            continue;
+                        }
+
+                        downloadTask.DownloadStarted = downloader.Download(new Uri(downloadTask.TorrentUrl), new Uri(setting.WebUiUrl), setting.WebUiPassword);
+                        db.SaveChanges();
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                     
-                    
-                    
                 }
-            }
-            //torrents.ForEach(t => downloader.Download(t, new Uri("http://localhost:8081/gui/"), ""));
+                Thread.Sleep(10000);
+            } while (true);
         }
     }
 }

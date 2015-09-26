@@ -7,7 +7,8 @@ namespace TorrentDownloader
 {
     public class UTorrentDownloader : ITorrentDownloader
     {
-        public void Download(Uri torrent, Uri torrenWebUiUri, string password)
+        private const string ErrorResultString = "\r\ninvalid request";
+        public bool Download(Uri torrent, Uri torrenWebUiUri, string password)
         {
             CookieContainer cc = new CookieContainer();
             HttpClientHandler handler = new HttpClientHandler()
@@ -16,12 +17,33 @@ namespace TorrentDownloader
                 CookieContainer = cc,
                 UseCookies = true
             };
-            HttpClient client = new HttpClient(handler);
+            string result;
 
-            var tokenHtml = client.GetAsync(torrenWebUiUri + $"token.html?t={CurrentUnixTime()}").Result.Content.ReadAsStringAsync().Result;
-            string token = Regex.Match(tokenHtml, @"'>(.+?)<\/").Groups[1].Value;
+            using (HttpClient client = new HttpClient(handler))
+            {
+                string tokenHtml;
+                try
+                {
+                    tokenHtml = client.GetAsync(torrenWebUiUri + $"token.html?t={CurrentUnixTime()}").Result.Content.ReadAsStringAsync().Result;
+                }
+                catch (Exception e)
+                {
+                    return false;
+                }
+                string token = Regex.Match(tokenHtml, @"'>(.+?)<\/").Groups[1].Value;
 
-            client.GetAsync(torrenWebUiUri + $"?token={token}&action=add-url&s={Uri.EscapeDataString(torrent.ToString())}&t={CurrentUnixTime()}").Wait();
+                try
+                {
+                    result = client.GetAsync(torrenWebUiUri + $"?token={token}&action=add-url&s={Uri.EscapeDataString(torrent.ToString())}&t={CurrentUnixTime()}")
+                        .Result.Content.ReadAsStringAsync().Result;
+                }
+                catch (Exception e)
+                {
+                    return false;
+                }
+            }
+
+            return result != ErrorResultString;
         }
 
         private static ulong CurrentUnixTime()
