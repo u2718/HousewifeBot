@@ -11,7 +11,6 @@ namespace HousewifeBot
 {
     public class Notifier
     {
-        private const string DownloadCommandPattern = "/d{0}_{1}";
         private static readonly Logger Logger = LogManager.GetLogger("Notifier");
 
         public TelegramApi TelegramApi { get; set; }
@@ -184,7 +183,7 @@ namespace HousewifeBot
                             {
                                 text += " (" + torrents.Select(t => t.Quality)
                                 .Aggregate(string.Empty,
-                                    (s, s1) => s + " " + string.Format(DownloadCommandPattern, notification.Id, s1))
+                                    (s, s1) => s + " " + string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
                                     + ")";
                             }
                             text += "\n";

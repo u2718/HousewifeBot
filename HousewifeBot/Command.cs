@@ -46,6 +46,13 @@ namespace HousewifeBot
 
         public static Command CreateCommand(string command)
         {
+            Regex downloadCommandRegex = new Regex(string.Format(DownloadCommand.DownloadCommandFormat, @"(\d+)", @"(.+)"));
+            if (downloadCommandRegex.IsMatch(command))
+            {
+                Match downloadMatch = downloadCommandRegex.Match(command);
+                return new DownloadCommand(int.Parse(downloadMatch.Groups[1].Value), downloadMatch.Groups[2].Value);
+            }
+
             switch (command.ToLower())
             {
                 case @"/start":

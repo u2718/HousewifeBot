@@ -36,5 +36,10 @@ namespace DAL
         {
             return Settings.FirstOrDefault(s => s.User.Id == user.Id);
         }
-    }
+
+        public Notification GetNotificationById(int notificationId)
+        {
+            return Notifications.FirstOrDefault(n => n.Id == notificationId);
+        }
+}
 }
