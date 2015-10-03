@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using DAL;
 using NLog;
 using Telegram;
@@ -169,8 +170,25 @@ namespace HousewifeBot
                 Logger.Debug("SendNotifications: Sending new notifications");
                 foreach (var userNotifications in notificationDictionary)
                 {
-                    string text = string.Join("\n", 
-                        userNotifications.Value.Select(n => n.Subscription.Show.Title + " - " + n.Episode.Title));
+                    string text = string.Empty;
+                    foreach (Notification notification in userNotifications.Value)
+                    {
+                        text += notification.Subscription.Show.Title + " - " + notification.Episode.Title;
+                        Settings settings = db.GetSettingsByUser(userNotifications.Key);
+                        if (settings != null)
+                        {
+                            ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
+                            List<TorrentDescription> torrents = torrentGetter.GetEpisodeTorrents(notification.Episode, settings.SiteLogin, settings.SitePassword);
+                            if (torrents.Count != 0)
+                            {
+                                text += " (" + torrents.Select(t => t.Quality)
+                                .Aggregate(string.Empty,
+                                    (s, s1) => s + " " + string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
+                                    + ")";
+                            }
+                            text += "\n";
+                        }
+                    }
 
                     try
                     {

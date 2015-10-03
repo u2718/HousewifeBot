@@ -4,13 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{880149B4-B6EA-4226-B22A-D59DC10CC30B}</ProjectGuid>
+    <ProjectGuid>{4013AE89-962E-4803-9A17-CEC42F72BA49}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HousewifeBot</RootNamespace>
-    <AssemblyName>HousewifeBot</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <RootNamespace>TorrentDownloader</RootNamespace>
+    <AssemblyName>TorrentDownloader</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -44,9 +45,8 @@
       <HintPath>..\packages\HtmlAgilityPack.1.4.9\lib\Net45\HtmlAgilityPack.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+    <Reference Include="NLog">
       <HintPath>..\packages\NLog.4.0.1\lib\net45\NLog.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -60,33 +60,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DownloadCommand.cs" />
-    <Compile Include="HelpCommand.cs" />
-    <Compile Include="ITorrentGetter.cs" />
-    <Compile Include="LostFilmTorrentGetter.cs" />
-    <Compile Include="MySubscriptionsCommand.cs" />
-    <Compile Include="SettingsCommand.cs" />
-    <Compile Include="StartCommand.cs" />
-    <Compile Include="Command.cs" />
-    <Compile Include="Notifier.cs" />
+    <Compile Include="ITorrentDownloader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ShowsCommand.cs" />
-    <Compile Include="SubscribeAllCommand.cs" />
-    <Compile Include="SubscribeCommand.cs" />
-    <Compile Include="TorrentDescription.cs" />
-    <Compile Include="UnknownCommand.cs" />
-    <Compile Include="UnsubscribeAllCommand.cs" />
-    <Compile Include="UnsubscribeCommand.cs" />
+    <Compile Include="UTorrentDownloader .cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config">
-      <SubType>Designer</SubType>
-    </None>
-    <Content Include="NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <None Include="Local.config">
+    <None Include="App.config" />
+    <None Include="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="NLog.xsd">
@@ -98,10 +79,6 @@
     <ProjectReference Include="..\DAL\DAL.csproj">
       <Project>{7f43e0e2-e657-47ca-9985-01e2bb6425d3}</Project>
       <Name>DAL</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Telegram\Telegram.csproj">
-      <Project>{bc113461-4cb9-4d77-88fa-e58f4d36eaa4}</Project>
-      <Name>Telegram</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

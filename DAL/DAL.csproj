@@ -31,11 +31,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.dll</HintPath>
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
-      <HintPath>..\packages\EntityFramework.6.0.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+      <HintPath>..\packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="FuzzyString, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -44,6 +44,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -55,8 +56,32 @@
   <ItemGroup>
     <Compile Include="AppDbContext.cs" />
     <Compile Include="DbEntry.cs" />
+    <Compile Include="DownloadTask.cs" />
+    <Compile Include="Encryptor.cs" />
+    <Compile Include="Migrations\201508012136202_InitialCreate.cs" />
+    <Compile Include="Migrations\201508012136202_InitialCreate.Designer.cs">
+      <DependentUpon>201508012136202_InitialCreate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201509251658334_AddSettings.cs" />
+    <Compile Include="Migrations\201509251658334_AddSettings.Designer.cs">
+      <DependentUpon>201509251658334_AddSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201509261000482_AddDownloadTask.cs" />
+    <Compile Include="Migrations\201509261000482_AddDownloadTask.Designer.cs">
+      <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201510031104062_RenameEncryptedFields.cs" />
+    <Compile Include="Migrations\201510031104062_RenameEncryptedFields.Designer.cs">
+      <DependentUpon>201510031104062_RenameEncryptedFields.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201510031228437_AddPasswordIVFields.cs" />
+    <Compile Include="Migrations\201510031228437_AddPasswordIVFields.Designer.cs">
+      <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Show.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Subscription.cs" />
@@ -66,7 +91,26 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\201508012136202_InitialCreate.resx">
+      <DependentUpon>201508012136202_InitialCreate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201509251658334_AddSettings.resx">
+      <DependentUpon>201509251658334_AddSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201509261000482_AddDownloadTask.resx">
+      <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510031104062_RenameEncryptedFields.resx">
+      <DependentUpon>201510031104062_RenameEncryptedFields.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510031228437_AddPasswordIVFields.resx">
+      <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

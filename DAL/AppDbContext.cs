@@ -13,6 +13,8 @@ namespace DAL
         public DbSet<User> Users { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Settings> Settings { get; set; }
+        public DbSet<DownloadTask> DownloadTasks { get; set; }
 
         public AppDbContext() : base("DbConnection")
         {
@@ -31,6 +33,7 @@ namespace DAL
                                              s.OriginalTitle.ToLower() == title ||
                                              s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
         }
+
 
         public Show GetShowById(int id)
         {
@@ -57,6 +60,16 @@ namespace DAL
             }
 
             return _shows;
+        }
+
+        public Settings GetSettingsByUser(User user)
+        {
+            return Settings.FirstOrDefault(s => s.User.Id == user.Id);
+        }
+
+        public Notification GetNotificationById(int notificationId)
+        {
+            return Notifications.FirstOrDefault(n => n.Id == notificationId);
         }
     }
 }
