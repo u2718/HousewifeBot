@@ -40,6 +40,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -52,6 +53,7 @@
     <Compile Include="AppDbContext.cs" />
     <Compile Include="DbEntry.cs" />
     <Compile Include="DownloadTask.cs" />
+    <Compile Include="Encryptor.cs" />
     <Compile Include="Migrations\201508012136202_InitialCreate.cs" />
     <Compile Include="Migrations\201508012136202_InitialCreate.Designer.cs">
       <DependentUpon>201508012136202_InitialCreate.cs</DependentUpon>
@@ -63,6 +65,14 @@
     <Compile Include="Migrations\201509261000482_AddDownloadTask.cs" />
     <Compile Include="Migrations\201509261000482_AddDownloadTask.Designer.cs">
       <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201510031104062_RenameEncryptedFields.cs" />
+    <Compile Include="Migrations\201510031104062_RenameEncryptedFields.Designer.cs">
+      <DependentUpon>201510031104062_RenameEncryptedFields.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201510031228437_AddPasswordIVFields.cs" />
+    <Compile Include="Migrations\201510031228437_AddPasswordIVFields.Designer.cs">
+      <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
@@ -88,6 +98,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201509261000482_AddDownloadTask.resx">
       <DependentUpon>201509261000482_AddDownloadTask.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510031104062_RenameEncryptedFields.resx">
+      <DependentUpon>201510031104062_RenameEncryptedFields.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510031228437_AddPasswordIVFields.resx">
+      <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
