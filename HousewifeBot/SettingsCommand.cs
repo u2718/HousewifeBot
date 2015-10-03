@@ -46,10 +46,12 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while sending commands list", e);
                 }
 
+                bool newSettings = false;
                 if (settings == null)
                 {
                     Program.Logger.Debug($"{GetType().Name}: Creating new settings for {Message.From}");
-                    settings = new Settings();
+                    newSettings = true;
+                    settings = new Settings {User = db.GetUserByTelegramId(Message.From.Id)};
                 }
 
                 Message msg;
@@ -101,6 +103,10 @@ namespace HousewifeBot
                     Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
                     try
                     {
+                        if (newSettings)
+                        {
+                            db.Settings.Add(settings);
+                        }
                         db.SaveChanges();
                     }
                     catch (Exception e)
