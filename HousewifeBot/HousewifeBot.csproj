@@ -65,6 +65,7 @@
     <Compile Include="ITorrentGetter.cs" />
     <Compile Include="LostFilmTorrentGetter.cs" />
     <Compile Include="MySubscriptionsCommand.cs" />
+    <Compile Include="SettingsCommand.cs" />
     <Compile Include="StartCommand.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="Notifier.cs" />
