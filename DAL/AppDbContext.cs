@@ -42,24 +42,46 @@ namespace DAL
 
         public List<Show> GetShowsFuzzy(string paramTitle)
         {
-            List<Show> _shows = new List<Show>();
+            List<Tuple<Show, double>> shows = new List<Tuple<Show, double>>();
 
             List<FuzzyStringComparisonOptions> options = new List<FuzzyStringComparisonOptions>();
 
             options.Add(FuzzyStringComparisonOptions.UseHammingDistance);
             options.Add(FuzzyStringComparisonOptions.UseLongestCommonSubsequence);
             options.Add(FuzzyStringComparisonOptions.UseLongestCommonSubstring);
+            Func<string, string, double> calculateSimilarityFactor = (source, target) =>
+            {
+                if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target))
+                {
+                    return 0;
+                }
+
+                double factor =(double)(source.LongestCommonSubsequence(target).Length + source.LongestCommonSubstring(target).Length)/source.Length;
+                if (source.Length == target.Length)
+                {
+                    factor += (double) (source.Length - source.HammingDistance(target))/source.Length;
+                    factor /= 3;
+                }
+                else
+                {
+                    factor /= 2;
+                }
+                return factor;
+            };
 
             FuzzyStringComparisonTolerance tolerance = FuzzyStringComparisonTolerance.Normal;
             foreach (Show show in Shows)
             {
                 if (show.OriginalTitle.ApproximatelyEquals(paramTitle, options, tolerance) || show.Title.ApproximatelyEquals(paramTitle, options, tolerance))
                 {
-                    _shows.Add(show);
+                    double maxSimilarityFactor = Math.Max(calculateSimilarityFactor(show.OriginalTitle, paramTitle), calculateSimilarityFactor(show.Title, paramTitle));
+                    shows.Add(new Tuple<Show, double>(show, maxSimilarityFactor));
                 }
             }
 
-            return _shows;
+            return shows.OrderByDescending(s => s.Item2)
+                .Select(s => s.Item1)
+                .ToList();
         }
 
         public Settings GetSettingsByUser(User user)
