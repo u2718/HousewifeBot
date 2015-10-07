@@ -52,6 +52,12 @@ namespace HousewifeBot
                 Match downloadMatch = downloadCommandRegex.Match(command);
                 return new DownloadCommand(int.Parse(downloadMatch.Groups[1].Value), downloadMatch.Groups[2].Value);
             }
+            Regex subscribeCommandRegex = new Regex(string.Format(SubscribeCommand.SubscribeCommandFormat, @"(\d+)"));
+            if (subscribeCommandRegex.IsMatch(command))
+            {
+                Match subscribeMatch = subscribeCommandRegex.Match(command);
+                return new SubscribeCommand(int.Parse(subscribeMatch.Groups[1].Value));
+            }
 
             switch (command.ToLower())
             {
