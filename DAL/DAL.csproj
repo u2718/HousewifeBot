@@ -78,6 +78,10 @@
     <Compile Include="Migrations\201510031228437_AddPasswordIVFields.Designer.cs">
       <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201510101627150_AddUserDateCreatedField.cs" />
+    <Compile Include="Migrations\201510101627150_AddUserDateCreatedField.Designer.cs">
+      <DependentUpon>201510101627150_AddUserDateCreatedField.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -110,6 +114,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201510031228437_AddPasswordIVFields.resx">
       <DependentUpon>201510031228437_AddPasswordIVFields.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510101627150_AddUserDateCreatedField.resx">
+      <DependentUpon>201510101627150_AddUserDateCreatedField.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

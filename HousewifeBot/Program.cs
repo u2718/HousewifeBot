@@ -105,7 +105,6 @@ namespace HousewifeBot
             }
 
             Database.SetInitializer(new MigrateDatabaseToLatestVersion<AppDbContext, DAL.Migrations.Configuration>());
-
             Notifier notifier = new Notifier(tg);
             var updateNotificationsTask = new Task(
                 () =>

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DAL
 {
@@ -8,9 +10,9 @@ namespace DAL
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
-
         public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
-
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public DateTimeOffset? DateCreated { get; set; }
         public override string ToString()
         {
             return
