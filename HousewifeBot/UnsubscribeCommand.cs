@@ -1,9 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using DAL;
-using User = DAL.User;
-using System.Collections.Generic;
-using Telegram;
 
 namespace HousewifeBot
 {
@@ -176,59 +174,8 @@ namespace HousewifeBot
                 showsList = shows.Select(s => $"{string.Format(UnsubscribeCommandFormat, s.Id)} {s.Title} ({s.OriginalTitle})").ToList();
             }
 
-            List<string> pagesList = new List<string>();
-            for (int i = 0; i < showsList.Count; i += messageSize)
-            {
-                if (i > showsList.Count)
-                {
-                    break;
-                }
-
-                int count = Math.Min(showsList.Count - i, messageSize);
-                pagesList.Add(
-                    showsList.GetRange(i, count)
-                        .Aggregate("", (s, s1) => s + "\n" + s1)
-                    );
-            }
-
-            try
-            {
-                Program.Logger.Debug($"{GetType().Name}: Sending shows list");
-
-                for (int i = 0; i < pagesList.Count; i++)
-                {
-                    string page = pagesList[i];
-
-                    if (i != pagesList.Count - 1)
-                    {
-                        page += "\n/next or /stop";
-                    }
-                    TelegramApi.SendMessage(Message.From, page);
-
-                    if (i == pagesList.Count - 1)
-                    {
-                        break;
-                    }
-                    Message message;
-                    do
-                    {
-                        message = TelegramApi.WaitForMessage(Message.From);
-                        if (message?.Text != "/stop" && message?.Text != "/next")
-                        {
-                            TelegramApi.SendMessage(Message.From, "\n/next or /stop");
-                        }
-                    } while (message?.Text != "/stop" && message?.Text != "/next");
-
-                    if (message.Text == "/stop")
-                    {
-                        break;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                throw new Exception($"{GetType().Name}: An error occurred while sending shows list", e);
-            }
+            List<string> pagesList = GetPages(showsList, messageSize);
+            SendPages(pagesList);
         }
     }
 }
