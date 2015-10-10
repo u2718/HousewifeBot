@@ -58,6 +58,12 @@ namespace HousewifeBot
                 Match subscribeMatch = subscribeCommandRegex.Match(command);
                 return new SubscribeCommand(int.Parse(subscribeMatch.Groups[1].Value));
             }
+            Regex unsubscribeCommandRegex = new Regex(string.Format(UnsubscribeCommand.UnsubscribeCommandFormat, @"(\d+)"));
+            if (unsubscribeCommandRegex.IsMatch(command))
+            {
+                Match unsubscribeMatch = unsubscribeCommandRegex.Match(command);
+                return new UnsubscribeCommand(int.Parse(unsubscribeMatch.Groups[1].Value));
+            }
 
             switch (command.ToLower())
             {

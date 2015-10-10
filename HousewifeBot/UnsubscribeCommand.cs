@@ -4,226 +4,231 @@ using DAL;
 using User = DAL.User;
 using System.Collections.Generic;
 using Telegram;
-using System.Text.RegularExpressions;
 
 namespace HousewifeBot
 {
     public class UnsubscribeCommand : Command
     {
+        public const string UnsubscribeCommandFormat = "/u_{0}";
         private const int MaxPageSize = 50;
+        public int? ShowId { get; set; }
 
-        private static readonly Regex SuggestionNumRegex = new Regex(@"[0-9]+");
-
+        public UnsubscribeCommand(int? showId = null)
+        {
+            ShowId = showId;
+        }
+       
         public override void Execute()
         {
-            int messageSize;
-            int.TryParse(Arguments, out messageSize);
-            if (messageSize == 0)
+            string response = null;
+            do
             {
-                messageSize = MaxPageSize;
-            }
-            messageSize = Math.Min(messageSize, MaxPageSize);
-            string response;
+                User user = GetUser(Message.From);
+                if (user == null || !UserHasSubscriptions(user))
+                {
+                    response = "Вы не подписаны ни на один сериал";
+                    break;
+                }
 
-            User user;
-            bool userHasSubscriptions = false;
-            using (var db = new AppDbContext())
+                if (ShowId != null)
+                {
+                    Show show;
+                    using (AppDbContext db = new AppDbContext())
+                    {
+                        show = db.GetShowById(ShowId.Value);
+                    }
+                    if (show == null)
+                    {
+                        response = $"Сериал с идентификатором {ShowId} не найден";
+                        break;
+                    }
+                    response = Unsubscribe(user, show);
+                }
+                else
+                {
+                    int messageSize;
+                    int.TryParse(Arguments, out messageSize);
+                    if (messageSize == 0)
+                    {
+                        messageSize = MaxPageSize;
+                    }
+                    messageSize = Math.Min(messageSize, MaxPageSize);
+                    SendSubscriptions(user, messageSize);
+                }
+            } while (false);
+
+            if (!string.IsNullOrEmpty(response))
             {
-                Program.Logger.Debug(
-                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
+                Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
                 try
                 {
-                    user = db.GetUserByTelegramId(Message.From.Id);
+                    TelegramApi.SendMessage(Message.From, response);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
+                }
+            }
+            Status = true;
+        }
+        private bool UserHasSubscriptions(User user)
+        {
+            if (user == null)
+            {
+                Program.Logger.Debug($"{GetType().Name}: User {Message.From} is not exists");
+                return false;
+            }
+
+            bool userHasSubscriptions;
+            using (AppDbContext db = new AppDbContext())
+            {
+                Program.Logger.Debug($"{GetType().Name}: Checking if user has subscriptions");
+                try
+                {
+                    userHasSubscriptions = db.Subscriptions.Any(s => s.User.Id == user.Id);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name}: An error occurred while checking if user has subscriptions", e);
+                }
+            }
+            return userHasSubscriptions;
+        }
+        private User GetUser(Telegram.User user)
+        {
+            using (AppDbContext db = new AppDbContext())
+            {
+                Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {user.Id} in database");
+                try
+                {
+                    return db.GetUserByTelegramId(user.Id);
                 }
                 catch (Exception e)
                 {
                     throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
                 }
-
-                if (user == null)
+            }
+        }
+        private string Unsubscribe(User user, Show show)
+        {
+            string response;
+            using (AppDbContext db = new AppDbContext())
+            {
+                Subscription subscription;
+                Program.Logger.Debug($"{GetType().Name}: Checking for subscription existence");
+                try
                 {
-                    Program.Logger.Debug($"{GetType().Name}: User {Message.From} is not exists");
+                    subscription = db.Subscriptions.FirstOrDefault(s => s.User.Id == user.Id && s.Show.Id == show.Id);
                 }
-                else
+                catch (Exception e)
                 {
-                    Program.Logger.Debug($"{GetType().Name}: Checking if user has subscriptions");
+                    throw new Exception($"{GetType().Name}: An error occurred while checking for subscription existence", e);
+                }
+                if (subscription != null)
+                {
+                    Program.Logger.Debug($"{GetType().Name}: Deleting notifications for subscription");
                     try
                     {
-                        userHasSubscriptions = db.Subscriptions.Any(s => s.User.Id == user.Id);
+                        db.Notifications.RemoveRange(db.Notifications.Where(n => n.Subscription.Id == subscription.Id));
                     }
                     catch (Exception e)
                     {
-                        throw new Exception($"{GetType().Name}: An error occurred while checking if user has subscriptions", e);
+                        throw new Exception($"{GetType().Name}: An error occurred while deleting notifications for subscription", e);
                     }
-                }
 
-
-                if (userHasSubscriptions)
-                {
-                    Show show=null;
-                    List<Show> shows;
-                    List<string> showsList;
-                    if (string.IsNullOrEmpty(Arguments))
+                    Program.Logger.Debug($"{GetType().Name}: Deleting subscription");
+                    try
                     {
-                        shows = user.Subscriptions.Select(s => s.Show).ToList();
-                        showsList = shows.Select(s => "/" + s.Id + " " + s.Title + " (" + s.OriginalTitle + ")").ToList();
-
-                        List<string> pagesList = new List<string>();
-                        for (int i = 0; i < showsList.Count; i += messageSize)
-                        {
-                            if (i > showsList.Count)
-                            {
-                                break;
-                            }
-
-                            int count = Math.Min(showsList.Count - i, messageSize);
-                            pagesList.Add(
-                                showsList.GetRange(i, count)
-                                .Aggregate("", (s, s1) => s + "\n" + s1)
-                                );
-                        }
-
-                        try
-                        {
-                            Program.Logger.Debug($"{GetType().Name}: Sending shows list");
-
-                            for (int i = 0; i < pagesList.Count; i++)
-                            {
-                                string page = pagesList[i];
-
-                                if (i != pagesList.Count - 1)
-                                {
-                                    page = "Сериалы, на которые вы подписаны:\n" + page + "\n/next or /stop";
-                                }
-
-                                if (i == pagesList.Count - 1)
-                                {
-                                    page = "Сериалы, на которые вы подписаны:\n" + page + "\n/stop"; ;
-                                }
-
-                                TelegramApi.SendMessage(Message.From, page);
-
-                                Message message;
-                                string footerText = "";
-                                do
-                                {
-                                    message = TelegramApi.WaitForMessage(Message.From);
-                                    if (message?.Text != "/stop" && message?.Text != "/next")
-                                    {
-                                        string someMatch = SuggestionNumRegex.Match(message.Text).Groups[0].Value;
-                                        if (someMatch == "" || someMatch == null)
-                                        {
-                                            if (i == pagesList.Count - 1)
-                                            {
-                                                footerText = "\n/stop";
-                                            }
-                                            else
-                                            {
-                                                footerText = "\n/next or /stop";
-                                            }
-                                            TelegramApi.SendMessage(Message.From, footerText);
-                                        }
-                                        else
-                                        {
-                                            int sId = int.Parse(someMatch);
-                                            show = db.GetShowById(sId);
-                                            break;
-                                        }
-                                    }
-                                } while (message?.Text != "/stop" && message?.Text != "/next");
-
-                                if (message.Text == "/stop" || show != null)
-                                {
-                                    break;
-                                }
-
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            throw new Exception($"{GetType().Name}: An error occurred while sending shows list", e);
-                        }
-                        
+                        db.Subscriptions.Remove(subscription);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while deleting subscription", e);
                     }
 
-                    Program.Logger.Info($"{GetType().Name}: {Message.From} is trying to unsubscribe");
-
-
-                        do
-                        {
-                            if (show == null)
-                            {
-                                Program.Logger.Info($"{GetType().Name}: Show was not selected");
-                                response = $"Сериал не выбран";
-                                break;
-                            }
-
-                            Program.Logger.Debug($"{GetType().Name}: Checking for subscription existence");
-                            Subscription subscription;
-                            try
-                            {
-                                subscription = db.Subscriptions
-                                    .FirstOrDefault(s => s.User.Id == user.Id && s.Show.Id == show.Id);
-                            }
-                            catch (Exception e)
-                            {
-                                throw new Exception(
-                                    $"{GetType().Name}: An error occurred while checking for subscription existence", e);
-                            }
-
-                            Program.Logger.Debug($"{GetType().Name}: Deleting notifications for subscription");
-                            try
-                            {
-                                db.Notifications.RemoveRange(
-                                    db.Notifications.Where(n => n.Subscription.Id == subscription.Id)
-                                    );
-                            }
-                            catch (Exception e)
-                            {
-                                throw new Exception(
-                                    $"{GetType().Name}: An error occurred while deleting notifications for subscription", e);
-                            }
-
-                            Program.Logger.Debug($"{GetType().Name}: Deleting subscription");
-                            try
-                            {
-                                db.Subscriptions.Remove(subscription);
-                            }
-                            catch (Exception e)
-                            {
-                                throw new Exception($"{GetType().Name}: An error occurred while deleting subscription", e);
-                            }
-
-                            response = $"Вы отписались от сериала '{show.Title}'";
-                        } while (false);
-
-                        try
-                        {
-                            db.SaveChanges();
-                        }
-                        catch (Exception e)
-                        {
-                            throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
-                        }
-
+                    try
+                    {
+                        db.SaveChanges();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
+                    }
+                    response = $"Вы отписались от сериала \"{show.Title}\"";
                 }
                 else
                 {
-                    response = "Вы не подписаны ни на один сериал";
+                    response = $"Вы, братишка, не подписаны на сериал \"{show.Title}\"";
+                }
+            }
+            return response;
+        }
+
+        private void SendSubscriptions(User user, int messageSize)
+        {
+            List<string> showsList;
+            using (AppDbContext db = new AppDbContext())
+            {
+                List<Show> shows = db.Subscriptions
+                    .Where(s => s.User.Id == user.Id)
+                    .Select(s => s.Show)
+                    .ToList();
+                showsList = shows.Select(s => $"{string.Format(UnsubscribeCommandFormat, s.Id)} {s.Title} ({s.OriginalTitle})").ToList();
+            }
+
+            List<string> pagesList = new List<string>();
+            for (int i = 0; i < showsList.Count; i += messageSize)
+            {
+                if (i > showsList.Count)
+                {
+                    break;
                 }
 
+                int count = Math.Min(showsList.Count - i, messageSize);
+                pagesList.Add(
+                    showsList.GetRange(i, count)
+                        .Aggregate("", (s, s1) => s + "\n" + s1)
+                    );
             }
-            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
+
             try
             {
-                TelegramApi.SendMessage(Message.From, response);
+                Program.Logger.Debug($"{GetType().Name}: Sending shows list");
+
+                for (int i = 0; i < pagesList.Count; i++)
+                {
+                    string page = pagesList[i];
+
+                    if (i != pagesList.Count - 1)
+                    {
+                        page += "\n/next or /stop";
+                    }
+                    TelegramApi.SendMessage(Message.From, page);
+
+                    if (i == pagesList.Count - 1)
+                    {
+                        break;
+                    }
+                    Message message;
+                    do
+                    {
+                        message = TelegramApi.WaitForMessage(Message.From);
+                        if (message?.Text != "/stop" && message?.Text != "/next")
+                        {
+                            TelegramApi.SendMessage(Message.From, "\n/next or /stop");
+                        }
+                    } while (message?.Text != "/stop" && message?.Text != "/next");
+
+                    if (message.Text == "/stop")
+                    {
+                        break;
+                    }
+                }
             }
             catch (Exception e)
             {
-                throw new Exception($"{GetType().Name}d: An error occurred while sending response to {Message.From}", e);
+                throw new Exception($"{GetType().Name}: An error occurred while sending shows list", e);
             }
-
-            Status = true;
         }
     }
 }
