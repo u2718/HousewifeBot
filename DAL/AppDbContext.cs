@@ -15,6 +15,7 @@ namespace DAL
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Settings> Settings { get; set; }
         public DbSet<DownloadTask> DownloadTasks { get; set; }
+        public DbSet<ShowNotification> ShowNotifications { get; set; }
 
         public AppDbContext() : base("DbConnection")
         {
