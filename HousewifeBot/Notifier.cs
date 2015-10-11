@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using DAL;
 using NLog;
 using Telegram;
@@ -22,8 +21,96 @@ namespace HousewifeBot
 
         public void UpdateNotifications()
         {
-            int newNotificationsCount = 0;
+            int newNotificationsCount = CreateEpisodeNotifications();
+            if (newNotificationsCount != 0)
+            {
+                Logger.Info($"UpdateNotifications: {newNotificationsCount} new " +
+                            $"{((newNotificationsCount == 1) ? "notification was created" : "notifications were created")}");
+            }
 
+            newNotificationsCount = CreateShowNotifications();
+            if (newNotificationsCount != 0)
+            {
+                Logger.Info($"UpdateNotifications: {newNotificationsCount} new " +
+                            $"{((newNotificationsCount == 1) ? "show notification was created" : "show notifications were created")}");
+            }
+        }
+
+        private static int CreateShowNotifications()
+        {
+            int newNotificationsCount = 0;
+            using (AppDbContext db = new AppDbContext())
+            {
+                Logger.Trace("UpdateNotifications: Retrieving users");
+
+                List<User> users;
+                try
+                {
+                    users = db.Users.ToList();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, "UpdateNotifications: An error occurred while retrieving users");
+                    return 0;
+                }
+
+                Logger.Trace("UpdateNotifications: Retrieving new shows for users");
+                foreach (var user in users)
+                {
+                    List<Show> shows;
+                    try
+                    {
+                        shows = db.Shows
+                            .Where(s => s.DateCreated > user.DateCreated &&
+                                        !db.ShowNotifications.Any(n => n.User.Id == user.Id && n.Show.Id == s.Id))
+                            .ToList();
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, $"UpdateNotifications: An error occurred while retrieving new shows for user: {user}");
+                        continue;
+                    }
+
+                    if (shows.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    List<ShowNotification> newNotifications;
+                    try
+                    {
+                        newNotifications = shows.Aggregate(
+                            new List<ShowNotification>(), (list, show) =>
+                            {
+                                list.Add(new ShowNotification() { Show = show, User = user });
+                                return list;
+                            });
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, $"UpdateNotifications: An error occurred while creating new notifications for user: {user}");
+                        continue;
+                    }
+
+                    db.ShowNotifications.AddRange(newNotifications);
+                    newNotificationsCount += newNotifications.Count;
+                }
+                Logger.Trace("UpdateNotifications: Saving changes to database");
+                try
+                {
+                    db.SaveChanges();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, "UpdateNotifications: An error occurred while saving changes to database");
+                }
+            }
+            return newNotificationsCount;
+        }
+
+        private static int CreateEpisodeNotifications()
+        {
+            int newNotificationsCount = 0;
             using (AppDbContext db = new AppDbContext())
             {
                 Logger.Trace("UpdateNotifications: Retrieving subscriptions");
@@ -35,7 +122,7 @@ namespace HousewifeBot
                 catch (Exception e)
                 {
                     Logger.Error(e, "UpdateNotifications: An error occurred while retrieving subscriptions");
-                    return;
+                    return 0;
                 }
 
                 Logger.Trace("UpdateNotifications: Retrieving new episodes for subscriptions");
@@ -54,9 +141,10 @@ namespace HousewifeBot
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(e, "UpdateNotifications: An error occurred while retrieving notifications for subscription: " +
-                                        $" {subscription.User} -" +
-                                        $" {subscription.Show.OriginalTitle}");
+                        Logger.Error(e,
+                            "UpdateNotifications: An error occurred while retrieving notifications for subscription: " +
+                            $" {subscription.User} -" +
+                            $" {subscription.Show.OriginalTitle}");
                         continue;
                     }
 
@@ -65,7 +153,7 @@ namespace HousewifeBot
                     {
                         episodes = db.Episodes
                             .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate &&
-                            !notifications.Any(n => n.Episode.Id == s.Id))
+                                        !notifications.Any(n => n.Episode.Id == s.Id))
                             .Select(s => s).ToList();
                     }
                     catch (Exception e)
@@ -118,12 +206,7 @@ namespace HousewifeBot
                     Logger.Error(e, "UpdateNotifications: An error occurred while saving changes to database");
                 }
             }
-
-            if (newNotificationsCount != 0)
-            {
-                Logger.Info($"UpdateNotifications: {newNotificationsCount} new " +
-                            $"{((newNotificationsCount == 1) ? "notification was created" : "notifications were created")}");
-            }
+            return newNotificationsCount;
         }
 
         public void SendNotifications()
