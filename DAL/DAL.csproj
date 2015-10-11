@@ -82,6 +82,10 @@
     <Compile Include="Migrations\201510101627150_AddUserDateCreatedField.Designer.cs">
       <DependentUpon>201510101627150_AddUserDateCreatedField.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201510111521508_AddShowDateCreatedField.cs" />
+    <Compile Include="Migrations\201510111521508_AddShowDateCreatedField.Designer.cs">
+      <DependentUpon>201510111521508_AddShowDateCreatedField.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -117,6 +121,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201510101627150_AddUserDateCreatedField.resx">
       <DependentUpon>201510101627150_AddUserDateCreatedField.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510111521508_AddShowDateCreatedField.resx">
+      <DependentUpon>201510111521508_AddShowDateCreatedField.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
