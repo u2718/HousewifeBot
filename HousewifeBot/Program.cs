@@ -20,6 +20,7 @@ namespace HousewifeBot
         private static string _token;
         private static int _updateNotificationsInterval;
         private static int _sendNotificationsInterval;
+        private static int _sendShowNotificationsInterval;
         private static int _retryPollingDelay;
 
         static bool LoadSettings()
@@ -52,6 +53,16 @@ namespace HousewifeBot
             catch (Exception e)
             {
                 Logger.Fatal(e, "An error occurred while loading send notifications interval");
+                result = false;
+            }
+
+            try
+            {
+                _sendShowNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendShowNotificationsInterval"]);
+            }
+            catch (Exception e)
+            {
+                Logger.Fatal(e, "An error occurred while loading send show notifications interval");
                 result = false;
             }
 
@@ -118,17 +129,29 @@ namespace HousewifeBot
                 );
             updateNotificationsTask.Start();
 
-            var sendNotificationsTask = new Task(
+            var sendEpisodesNotificationsTask = new Task(
                 () =>
                 {
                     while (true)
                     {
-                        notifier.SendNotifications();
+                        notifier.SendEpisodesNotifications();
                         Thread.Sleep(_sendNotificationsInterval);
                     }
                 }
                 );
-            sendNotificationsTask.Start();
+
+            var sendShowsNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.SendShowsNotifications();
+                        Thread.Sleep(_sendShowNotificationsInterval);
+                    }
+                });
+
+            sendEpisodesNotificationsTask.Start();
+            sendShowsNotificationsTask.Start();
 
             var processingCommandUsers = new ConcurrentDictionary<User, bool>();
             Regex commandRegex = new Regex(@"(/\w+)\s*");
