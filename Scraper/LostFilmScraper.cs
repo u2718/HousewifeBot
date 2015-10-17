@@ -49,7 +49,8 @@ namespace Scraper
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
+                        Program.Logger.Error(e, "An error occurred while updating SiteId or OriginalTitle");
+
                     }
                 }
                 db.SaveChanges();
@@ -65,7 +66,7 @@ namespace Scraper
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
+                        Program.Logger.Error(e, "An error occurred while loading show description");
                     }
                 }
                 db.SaveChanges();
@@ -95,7 +96,7 @@ namespace Scraper
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Program.Logger.Error(e, $"An error occurred while downloading page: {url}");
 
                     if (i == RetryCount)
                     {
@@ -112,7 +113,7 @@ namespace Scraper
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Program.Logger.Error(e, "An error occurred while creating HtmlDocument");
                 throw;
             }
             return doc;
@@ -125,11 +126,11 @@ namespace Scraper
             string descriptionText = doc.DocumentNode.SelectNodes("//div[@id='MainDiv']//div[@id='Onwrapper']//div[@class='mid']//div").First().InnerText.Trim();
             if (string.IsNullOrEmpty(descriptionText))
             {
-                return String.Empty;
+                return string.Empty;
             }
             List<string> descriptionParts =
-                descriptionText.Replace("\r", String.Empty)
-                    .Replace("\t", String.Empty)
+                descriptionText.Replace("\r", string.Empty)
+                    .Replace("\t", string.Empty)
                     .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .ToList();
 
@@ -157,14 +158,14 @@ namespace Scraper
                 ?.Select(s => s?.InnerText?.Trim())
                 .ToArray();
 
-            var seriesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a[@class='a_details']")
+            var episodesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a[@class='a_details']")
                 ?.Select(
                     s => s?.Attributes["href"] != null ?
                     IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
                     null)
                 .ToArray();
 
-            if (showTitles == null || seriesTitles == null || seriesIds == null)
+            if (showTitles == null || seriesTitles == null || episodesIds == null)
             {
                 throw new ArgumentException("Invalid web page", nameof(document));
             }
@@ -177,18 +178,18 @@ namespace Scraper
             bool stop = false;
             for (int i = 0; i < showTitles.Length; i++)
             {
-                int seriesId;
+                int episodeId;
                 try
                 {
-                    seriesId = int.Parse(seriesIds[i]);
+                    episodeId = int.Parse(episodesIds[i]);
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    Program.Logger.Error(e, $"An error occurred while converting EpisodeId: {episodesIds[i]}");
                     continue;
                 }
 
-                if (seriesId <= LastId)
+                if (episodeId <= LastId)
                 {
                     stop = true;
                     break;
@@ -212,7 +213,7 @@ namespace Scraper
                 showDictionary[showTitles[i]].Episodes.Add(
                     new Episode
                     {
-                        SiteId = seriesId,
+                        SiteId = episodeId,
                         Title = seriesTitles[i],
                         Date = date
                     }
