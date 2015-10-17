@@ -313,18 +313,27 @@ namespace HousewifeBot
                         if (settings != null)
                         {
                             ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
-                            List<TorrentDescription> torrents = torrentGetter.GetEpisodeTorrents(notification.Episode,
-                                settings.SiteLogin, settings.SitePassword);
-                            if (torrents.Count != 0)
+
+                            try
                             {
-                                text += " (" +
-                                        torrents.Select(t => t.Quality)
-                                            .Aggregate(string.Empty,
-                                                (s, s1) =>
-                                                    s + " " +
-                                                    string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
-                                        + ")";
+                                List<TorrentDescription> torrents = torrentGetter.GetEpisodeTorrents(notification.Episode, settings.SiteLogin, settings.SitePassword);
+                                if (torrents.Count != 0)
+                                {
+                                    text += " (" +
+                                            torrents.Select(t => t.Quality)
+                                                .Aggregate(string.Empty,
+                                                    (s, s1) =>
+                                                        s + " " +
+                                                        string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
+                                            + ")";
+                                }
                             }
+                            catch (Exception e)
+                            {
+                                Logger.Error(e, $"SendEpisodesNotifications: An error occured while retrieving torrents for {notification.Episode.Show.Title} - {notification.Episode.Title}");
+                                text += "(Не удалось получить список торрентов. Возможно указан неверный логин/пароль)";
+                            }
+                          
                             text += "\n";
                         }
                     }

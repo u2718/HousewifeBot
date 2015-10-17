@@ -40,12 +40,12 @@ namespace Scraper
 
             using (AppDbContext db = new AppDbContext())
             {
-                foreach (var show in db.Shows.Where(s => s.SiteId == 0))
+                foreach (var show in db.Shows.Where(s => s.SiteId == 0 || string.IsNullOrEmpty(s.OriginalTitle)))
                 {
                     try
                     {
                         show.SiteId = shows.First(s => s.Title == show.Title).SiteId;
-
+                        show.OriginalTitle = shows.First(s => s.Title == show.Title).OriginalTitle;
                     }
                     catch (Exception e)
                     {

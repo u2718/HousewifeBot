@@ -68,7 +68,10 @@ namespace HousewifeBot
                 }
                 catch (Exception e)
                 {
-                    Program.Logger.Error(e, "An error occurred while retrieving torrents");
+                    Program.Logger.Error(e, $"An error occured while retrieving torrents for {notification.Episode.Show.Title} - {notification.Episode.Title}");
+                    TelegramApi.SendMessage(Message.From, "(Не удалось получить список торрентов. Возможно указан неверный логин/пароль)");
+                    Status = false;
+                    return;
                 }
                 Program.Logger.Debug($"{GetType().Name}: Number of torrents: {torrents?.Count() ?? 0}");
 
