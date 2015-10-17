@@ -90,6 +90,10 @@
     <Compile Include="Migrations\201510111531146_AddShowNotifications.Designer.cs">
       <DependentUpon>201510111531146_AddShowNotifications.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201510171000332_AddShowSiteIdDescriptionFields.cs" />
+    <Compile Include="Migrations\201510171000332_AddShowSiteIdDescriptionFields.Designer.cs">
+      <DependentUpon>201510171000332_AddShowSiteIdDescriptionFields.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -132,6 +136,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201510111531146_AddShowNotifications.resx">
       <DependentUpon>201510111531146_AddShowNotifications.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201510171000332_AddShowSiteIdDescriptionFields.resx">
+      <DependentUpon>201510171000332_AddShowSiteIdDescriptionFields.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

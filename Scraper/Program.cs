@@ -57,11 +57,11 @@ namespace Scraper
                 Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
                     @"http://www.lostfilm.tv/serials.php", lastId);
 
-                List<Tuple<string, string>> showsTuples;
+                List<Show> showsList;
                 Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
                 try
                 {
-                    showsTuples = scraper.LoadShows();
+                    showsList = scraper.LoadShows();
                 }
                 catch (Exception e)
                 {
@@ -72,18 +72,18 @@ namespace Scraper
                 int newShowsCount = 0;
                 try
                 {
-                    foreach (var showTuple in showsTuples)
+                    foreach (var showTuple in showsList)
                     {
-                        if (db.Shows.Any(s => s.Title == showTuple.Item1))
+                        if (db.Shows.Any(s => s.Title == showTuple.Title))
                         {
-                            db.Shows.First(s => s.Title == showTuple.Item1).OriginalTitle = showTuple.Item2;
+                            db.Shows.First(s => s.Title == showTuple.Title).OriginalTitle = showTuple.OriginalTitle;
                         }
                         else
                         {
                             db.Shows.Add(new Show
                             {
-                                Title = showTuple.Item1,
-                                OriginalTitle = showTuple.Item2
+                                Title = showTuple.Title,
+                                OriginalTitle = showTuple.OriginalTitle
                             });
                             newShowsCount++;
                         }

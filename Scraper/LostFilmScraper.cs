@@ -12,27 +12,65 @@ namespace Scraper
     {
         private static readonly Regex DateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
         private static readonly Regex IdRegex = new Regex(@"id=(\d+)");
+        private static readonly Regex ShowUrlRegex = new Regex(@"/browse\.php\?cat=(\d+)");
         private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
+
+        private const string ShowPageUrl = "?cat=";
 
         public LostFilmScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
             SiteTitle = "LostFilm.TV";
         }
 
-        public override List<Tuple<string, string>> LoadShows()
+        public override List<Show> LoadShows()
         {
             HtmlDocument doc = DownloadDocument(ShowsListUrl);
             var showNodes = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='bb']//a[@class='bb_a']");
 
             Regex ruTitleRegex = new Regex(@"(.*)<br>");
             Regex engTitleRegex = new Regex(@"\((.*)\)");
-            return showNodes.Select(n =>
-                new Tuple<string, string>
-                    (
-                    ruTitleRegex.Match(n.InnerHtml).Groups[1].Value,
-                    engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value
-                    )
+            List<Show> shows = showNodes.Select(n =>
+                new Show()
+                {
+                    SiteId = int.Parse(ShowUrlRegex.Match(n.Attributes["href"].Value).Groups[1].Value),
+                    Title = ruTitleRegex.Match(n.InnerHtml).Groups[1].Value,
+                    OriginalTitle = engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value
+                }
                 ).ToList();
+
+            using (AppDbContext db = new AppDbContext())
+            {
+                foreach (var show in db.Shows.Where(s => s.SiteId == 0))
+                {
+                    try
+                    {
+                        show.SiteId = shows.First(s => s.Title == show.Title).SiteId;
+
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+                db.SaveChanges();
+            }
+
+            using (AppDbContext db = new AppDbContext())
+            {
+                foreach (var show in db.Shows.Where(s => string.IsNullOrEmpty(s.Description)))
+                {
+                    try
+                    {
+                        show.Description = LoadShowDescription(show);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+                db.SaveChanges();
+            }
+            return shows;
         }
 
         protected override bool LoadPage(string url, out Dictionary<string, Show> shows)
@@ -80,6 +118,30 @@ namespace Scraper
             return doc;
         }
 
+        private string LoadShowDescription(Show show)
+        {
+            string u = $"{Url}{ShowPageUrl}{show.SiteId}";
+            HtmlDocument doc = DownloadDocument(u);
+            string descriptionText = doc.DocumentNode.SelectNodes("//div[@id='MainDiv']//div[@id='Onwrapper']//div[@class='mid']//div").First().InnerText.Trim();
+            if (string.IsNullOrEmpty(descriptionText))
+            {
+                return String.Empty;
+            }
+            List<string> descriptionParts =
+                descriptionText.Replace("\r", String.Empty)
+                    .Replace("\t", String.Empty)
+                    .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .ToList();
+
+            return descriptionParts
+                .GetRange(1, descriptionParts.Count - 1)
+                .Aggregate(
+                    string.Empty,
+                    ((s, s1) => s + s1 + "\n")
+                );
+
+        }
+
         private bool Parse(HtmlDocument document, out Dictionary<string, Show> result)
         {
             if (document == null)
@@ -88,18 +150,19 @@ namespace Scraper
             }
 
             var showTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
-                ?.Select(s => s?.Attributes["title"]?.Value?.Trim()).ToArray();
+                ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
+                .ToArray();
 
-            var seriesTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
-                //span[@class='torrent_title']//b")
-                ?.Select(s => s?.InnerText?.Trim()).ToArray();
+            var seriesTitles = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//span[@class='torrent_title']//b")
+                ?.Select(s => s?.InnerText?.Trim())
+                .ToArray();
 
-            var seriesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']
-                //a[@class='a_details']")
+            var seriesIds = document.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a[@class='a_details']")
                 ?.Select(
                     s => s?.Attributes["href"] != null ?
                     IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value :
-                    null).ToArray();
+                    null)
+                .ToArray();
 
             if (showTitles == null || seriesTitles == null || seriesIds == null)
             {

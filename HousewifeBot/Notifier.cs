@@ -231,45 +231,25 @@ namespace HousewifeBot
                     return;
                 }
 
-                Dictionary<User, List<ShowNotification>> notificationDictionary =
-                    showNotifications.Aggregate(
-                        new Dictionary<User, List<ShowNotification>>(),
-                        (dictionary, notification) =>
-                        {
-                            if (dictionary.ContainsKey(notification.User))
-                            {
-                                dictionary[notification.User].Add(notification);
-                            }
-                            else
-                            {
-                                dictionary.Add(notification.User, new List<ShowNotification>() { notification });
-                            }
-                            return dictionary;
-                        }
-                        );
-
+             
                 Logger.Debug("SendShowsNotifications: Sending new notifications");
-                foreach (var userNotifications in notificationDictionary)
+                foreach (var notification in showNotifications)
                 {
-                    string text = userNotifications.Value
-                        .Aggregate(
-                        string.Empty, 
-                        (t, notification) => t + $"{notification.Show.Title} ({string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)})\n");
-
+                    string text = $"{notification.Show.Title} ({string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)})\n{notification.Show.Description}";
                     try
                     {
-                        TelegramApi.SendMessage(userNotifications.Key.TelegramUserId, text);
+                        TelegramApi.SendMessage(notification.User.TelegramUserId, text);
                     }
                     catch (Exception e)
                     {
                         Logger.Error(e, "SendShowsNotifications: An error occurred while sending new notifications");
                     }
 
-                    userNotifications.Value.ForEach(notification => notification.Notified = true);
+                    notification.Notified = true;
                 }
 
-                Logger.Info($"SendShowsNotifications: {notificationDictionary.Count} new " +
-                           $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
+                //Logger.Info($"SendShowsNotifications: {notificationDictionary.Count} new " +
+                //           $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
 
                 Logger.Trace("SendShowsNotifications: Saving changes to database");
                 try

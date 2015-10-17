@@ -66,7 +66,7 @@ namespace Scraper
             return result;
         }
 
-        public abstract List<Tuple<string, string>> LoadShows();
+        public abstract List<Show> LoadShows();
 
         protected abstract bool LoadPage(string url, out Dictionary<string, Show> shows);
         protected abstract string GetPageUrlByNumber(int pageNumber);
