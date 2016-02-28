@@ -72,19 +72,18 @@ namespace Scraper
                 int newShowsCount = 0;
                 try
                 {
-                    foreach (var showTuple in showsList)
+                    foreach (var show in showsList)
                     {
-                        if (db.Shows.Any(s => s.Title == showTuple.Title))
+                        Show dbShow = db.Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
+                        if (dbShow != null)
                         {
-                            db.Shows.First(s => s.Title == showTuple.Title).OriginalTitle = showTuple.OriginalTitle;
+                            dbShow.OriginalTitle = show.OriginalTitle;
+                            dbShow.Description = show.Description ?? dbShow.Description;
+                            dbShow.SiteId = show.SiteId;
                         }
                         else
                         {
-                            db.Shows.Add(new Show
-                            {
-                                Title = showTuple.Title,
-                                OriginalTitle = showTuple.OriginalTitle
-                            });
+                            db.Shows.Add(show);
                             newShowsCount++;
                         }
                     }

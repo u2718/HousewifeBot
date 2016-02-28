@@ -13,5 +13,23 @@ namespace DAL
         public virtual List<Episode> Episodes { get; set; } = new List<Episode>();
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTimeOffset? DateCreated { get; set; }
+
+        // override object.Equals
+        public override bool Equals(object obj)
+        {
+            Show s = obj as Show;
+            if (s == null)
+            {
+                return false;
+            }
+
+            return SiteId == s.SiteId;
+        }
+
+        // override object.GetHashCode
+        public override int GetHashCode()
+        {
+            return SiteId.GetHashCode();
+        }
     }
 }

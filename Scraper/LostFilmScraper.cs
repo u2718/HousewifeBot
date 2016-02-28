@@ -50,7 +50,6 @@ namespace Scraper
                     catch (Exception e)
                     {
                         Program.Logger.Error(e, "An error occurred while updating SiteId or OriginalTitle");
-
                     }
                 }
                 db.SaveChanges();
@@ -58,11 +57,12 @@ namespace Scraper
 
             using (AppDbContext db = new AppDbContext())
             {
-                foreach (var show in db.Shows.Where(s => string.IsNullOrEmpty(s.Description)))
+                foreach (var show in shows.Except(db.Shows.Where(s => !string.IsNullOrEmpty(s.Description))))
                 {
                     try
                     {
                         show.Description = LoadShowDescription(show);
+                        shows.First(s => s.SiteId == show.SiteId).Description = show.Description;
                     }
                     catch (Exception e)
                     {
@@ -123,11 +123,12 @@ namespace Scraper
         {
             string u = $"{Url}{ShowPageUrl}{show.SiteId}";
             HtmlDocument doc = DownloadDocument(u);
-            string descriptionText = doc.DocumentNode.SelectNodes("//div[@id='MainDiv']//div[@id='Onwrapper']//div[@class='mid']//div").First().InnerText.Trim();
+            string descriptionText = doc.DocumentNode.SelectNodes("//div[@id='MainDiv']//div[@id='Onwrapper']//div[@class='mid']//div//h1").First().ParentNode.InnerText.Trim();
             if (string.IsNullOrEmpty(descriptionText))
             {
                 return string.Empty;
             }
+
             List<string> descriptionParts =
                 descriptionText.Replace("\r", string.Empty)
                     .Replace("\t", string.Empty)
@@ -140,7 +141,6 @@ namespace Scraper
                     string.Empty,
                     ((s, s1) => s + s1 + "\n")
                 );
-
         }
 
         private bool Parse(HtmlDocument document, out Dictionary<string, Show> result)
