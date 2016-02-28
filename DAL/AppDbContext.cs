@@ -73,7 +73,8 @@ namespace DAL
             FuzzyStringComparisonTolerance tolerance = FuzzyStringComparisonTolerance.Normal;
             foreach (Show show in Shows)
             {
-                if (show.OriginalTitle.ApproximatelyEquals(paramTitle, options, tolerance) || show.Title.ApproximatelyEquals(paramTitle, options, tolerance))
+                if (!String.IsNullOrEmpty(show.OriginalTitle) && show.OriginalTitle.ApproximatelyEquals(paramTitle, options, tolerance) || 
+                    !String.IsNullOrEmpty(show.Title) && show.Title.ApproximatelyEquals(paramTitle, options, tolerance))
                 {
                     double maxSimilarityFactor = Math.Max(calculateSimilarityFactor(show.OriginalTitle, paramTitle), calculateSimilarityFactor(show.Title, paramTitle));
                     shows.Add(new Tuple<Show, double>(show, maxSimilarityFactor));
