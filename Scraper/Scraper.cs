@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using DAL;
+using HtmlAgilityPack;
 
 namespace Scraper
 {
@@ -66,8 +70,42 @@ namespace Scraper
             return result;
         }
 
-        public abstract List<Show> LoadShows();
+        protected async Task<HtmlDocument> DownloadDocument(string url)
+        {
+            string html = string.Empty;
+            for (int i = 0; i <= RetryCount; i++)
+            {
+                try
+                {
+                    html = Encoding.UTF8.GetString(await Client.DownloadDataTaskAsync(url));
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Program.Logger.Error(e, $"An error occurred while downloading page: {url}");
 
+                    if (i == RetryCount)
+                    {
+                        throw;
+                    }
+                    Thread.Sleep(1000);
+                }
+            }
+
+            HtmlDocument doc = new HtmlDocument();
+            try
+            {
+                doc.LoadHtml(html);
+            }
+            catch (Exception e)
+            {
+                Program.Logger.Error(e, "An error occurred while creating HtmlDocument");
+                throw;
+            }
+            return doc;
+        }
+
+        public abstract Task<List<Show>> LoadShows();
         protected abstract bool LoadPage(string url, out Dictionary<string, Show> shows);
         protected abstract string GetPageUrlByNumber(int pageNumber);
     }

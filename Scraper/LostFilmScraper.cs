@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
+using System.Threading.Tasks;
 using DAL;
 using HtmlAgilityPack;
 
@@ -22,9 +22,9 @@ namespace Scraper
             SiteTitle = "LostFilm.TV";
         }
 
-        public override List<Show> LoadShows()
+        public override async Task<List<Show>> LoadShows()
         {
-            HtmlDocument doc = DownloadDocument(ShowsListUrl);
+            HtmlDocument doc = await DownloadDocument(ShowsListUrl);
             var showNodes = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='bb']//a[@class='bb_a']");
 
             Regex ruTitleRegex = new Regex(@"(.*)<br>");
@@ -76,7 +76,7 @@ namespace Scraper
 
         protected override bool LoadPage(string url, out Dictionary<string, Show> shows)
         {
-            return Parse(DownloadDocument(url), out shows);
+            return Parse(DownloadDocument(url).Result, out shows);
         }
 
         protected override string GetPageUrlByNumber(int pageNumber)
@@ -84,45 +84,10 @@ namespace Scraper
             return Url + $"?o={pageNumber * 15}";
         }
 
-        private HtmlDocument DownloadDocument(string url)
-        {
-            string html = string.Empty;
-            for (int i = 0; i <= RetryCount; i++)
-            {
-                try
-                {
-                    html = Client.DownloadString(url);
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Program.Logger.Error(e, $"An error occurred while downloading page: {url}");
-
-                    if (i == RetryCount)
-                    {
-                        throw;
-                    }
-                    Thread.Sleep(1000);
-                }
-            }
-
-            HtmlDocument doc = new HtmlDocument();
-            try
-            {
-                doc.LoadHtml(html);
-            }
-            catch (Exception e)
-            {
-                Program.Logger.Error(e, "An error occurred while creating HtmlDocument");
-                throw;
-            }
-            return doc;
-        }
-
         private string LoadShowDescription(Show show)
         {
             string u = $"{Url}{ShowPageUrl}{show.SiteId}";
-            HtmlDocument doc = DownloadDocument(u);
+            HtmlDocument doc = DownloadDocument(u).Result;
             string descriptionText = doc.DocumentNode.SelectNodes("//div[@id='MainDiv']//div[@id='Onwrapper']//div[@class='mid']//div//h1").First().ParentNode.InnerText.Trim();
             if (string.IsNullOrEmpty(descriptionText))
             {

@@ -33,12 +33,7 @@ namespace Scraper
         static void Main()
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
-
-            if (!LoadSettings())
-            {
-                return;
-            }
-
+            if (!LoadSettings()) return;
             using (var db = new AppDbContext())
             {
                 int lastId;
@@ -61,7 +56,7 @@ namespace Scraper
                 Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
                 try
                 {
-                    showsList = scraper.LoadShows();
+                    showsList = scraper.LoadShows().Result;
                 }
                 catch (Exception e)
                 {
@@ -128,7 +123,7 @@ namespace Scraper
                             newShowsCount++;
                         }
                         newEpisodesCount += show.Episodes.Count;
-                        
+
                         Logger.Info($"{show.Title} - {string.Join(", ", show.Episodes.Select(e => e.Title))}");
                     }
 
@@ -138,7 +133,8 @@ namespace Scraper
                     }
                     if (newEpisodesCount > 0)
                     {
-                        Logger.Info($"{newEpisodesCount} new {(newEpisodesCount == 1 ? "episode" : "episodes")} added");
+                        Logger.Info(
+                            $"{newEpisodesCount} new {(newEpisodesCount == 1 ? "episode" : "episodes")} added");
                     }
 
                     Logger.Trace("Saving changes to database");
