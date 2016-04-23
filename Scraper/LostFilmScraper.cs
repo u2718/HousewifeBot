@@ -20,6 +20,11 @@ namespace Scraper
         public LostFilmScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
             SiteTitle = "LostFilm.TV";
+            SiteTypeName = "lostfilm";
+            using (var db = new AppDbContext())
+            {
+                SiteType = db.GetSiteTypeByName(SiteTypeName);
+            }
         }
 
         public override async Task<List<Show>> LoadShows()

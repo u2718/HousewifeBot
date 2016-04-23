@@ -6,6 +6,7 @@ using System.Threading;
 using DAL;
 using NLog;
 using System.Configuration;
+using System.Threading.Tasks;
 
 namespace Scraper
 {
@@ -34,24 +35,90 @@ namespace Scraper
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
             if (!LoadSettings()) return;
-            using (var db = new AppDbContext())
+            var scrapers = new List<Scraper>()
             {
-                int lastId;
-                Logger.Debug("Retrieving last episode Id from database");
+                new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", "http://www.lostfilm.tv/serials.php", GetLastId("lostfilm")),
+                new NewStudioScraper(@"http://newstudio.tv/", @"http://newstudio.tv/", GetLastId("newstudio"))
+            };
+            var tasks = new List<Task>(scrapers.Count);
+            foreach (var scraper in scrapers)
+            {
+                var task = new Task(() => LoadShows(scraper));
+                tasks.Add(task);
+                task.Start();
+            }
+            Task.WaitAll(tasks.ToArray());
+        }
+
+        private static void LoadShows(Scraper scraper)
+        {
+            UpdateShows(scraper);
+            while (true)
+            {
+                List<Show> shows;
+                Logger.Trace($"Retrieving new episodes from {scraper.SiteTitle}");
                 try
                 {
-                    lastId = db.Episodes?.OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
+                    shows = scraper.Load();
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(e, "An error occurred while retrieving last episode Id");
-                    return;
+                    Logger.Error(e, $"An error occurred while retrieving new episodes from {scraper.SiteTitle}");
+                    shows = new List<Show>();
                 }
+                UpdateEpisodes(shows);
+                Thread.Sleep(TimeSpan.FromMinutes(_updateInterval));
+            }
+        }
 
+        private static void UpdateEpisodes(List<Show> shows)
+        {
+            int newShowsCount = 0;
+            int newEpisodesCount = 0;
+            using (var db = new AppDbContext())
+            {
+                foreach (var show in shows)
+                {
+                    if (db.Shows.Any(s => s.Title == show.Title))
+                    {
+                        db.Shows.First(s => s.Title == show.Title)
+                            .Episodes.AddRange(show.Episodes);
+                    }
+                    else
+                    {
+                        db.Shows.Add(show);
+                        newShowsCount++;
+                    }
+                    newEpisodesCount += show.Episodes.Count;
 
-                Scraper scraper = new LostFilmScraper(@"https://www.lostfilm.tv/browse.php",
-                    @"http://www.lostfilm.tv/serials.php", lastId);
+                    Logger.Info($"{show.Title} - {string.Join(", ", show.Episodes.Select(e => e.Title))}");
+                }
+                if (newShowsCount > 0)
+                {
+                    Logger.Info($"{newShowsCount} new {(newShowsCount == 1 ? "show" : "shows")} added");
+                }
+                if (newEpisodesCount > 0)
+                {
+                    Logger.Info(
+                        $"{newEpisodesCount} new {(newEpisodesCount == 1 ? "episode" : "episodes")} added");
+                }
+                Logger.Trace("Saving changes to database");
+                try
+                {
+                    db.SaveChanges();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, "An error occurred while saving changes to database");
+                }
+            }
+        }
 
+        private static void UpdateShows(Scraper scraper)
+        {
+            int newShowsCount = 0;
+            using (var db = new AppDbContext())
+            {
                 List<Show> showsList;
                 Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
                 try
@@ -63,8 +130,6 @@ namespace Scraper
                     Logger.Error(e, $"An error occurred while retrieving shows from {scraper.SiteTitle}");
                     return;
                 }
-
-                int newShowsCount = 0;
                 try
                 {
                     foreach (var show in showsList)
@@ -88,67 +153,28 @@ namespace Scraper
                 {
                     Logger.Error(e, "An error occurred while adding new shows to database");
                 }
-
                 if (newShowsCount > 0)
                 {
                     Logger.Info($"{newShowsCount} new {(newShowsCount == 1 ? "show" : "shows")} added");
                 }
+            }
+        }
 
-                while (true)
+        private static int GetLastId(string siteTypeName)
+        {
+            using (var db = new AppDbContext())
+            {
+                int lastId = 14468;
+                Logger.Debug("Retrieving last episode Id from database");
+                try
                 {
-                    List<Show> shows;
-                    Logger.Trace($"Retrieving new episodes from {scraper.SiteTitle}");
-                    try
-                    {
-                        shows = scraper.Load();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, $"An error occurred while retrieving new episodes from {scraper.SiteTitle}");
-                        shows = new List<Show>();
-                    }
-
-                    newShowsCount = 0;
-                    int newEpisodesCount = 0;
-                    foreach (var show in shows)
-                    {
-                        if (db.Shows.Any(s => s.Title == show.Title))
-                        {
-                            db.Shows.First(s => s.Title == show.Title)
-                                .Episodes.AddRange(show.Episodes);
-                        }
-                        else
-                        {
-                            db.Shows.Add(show);
-                            newShowsCount++;
-                        }
-                        newEpisodesCount += show.Episodes.Count;
-
-                        Logger.Info($"{show.Title} - {string.Join(", ", show.Episodes.Select(e => e.Title))}");
-                    }
-
-                    if (newShowsCount > 0)
-                    {
-                        Logger.Info($"{newShowsCount} new {(newShowsCount == 1 ? "show" : "shows")} added");
-                    }
-                    if (newEpisodesCount > 0)
-                    {
-                        Logger.Info(
-                            $"{newEpisodesCount} new {(newEpisodesCount == 1 ? "episode" : "episodes")} added");
-                    }
-
-                    Logger.Trace("Saving changes to database");
-                    try
-                    {
-                        db.SaveChanges();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "An error occurred while saving changes to database");
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMinutes(_updateInterval));
+                    lastId = db.Episodes?.Where(e => e.SiteType.Name == siteTypeName).OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
                 }
+                catch (Exception e)
+                {
+                    Logger.Error(e, "An error occurred while retrieving last episode Id");
+                }
+                return lastId;
             }
         }
     }

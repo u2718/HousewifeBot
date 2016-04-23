@@ -12,9 +12,15 @@ namespace Scraper
         private const string ShowPageUrl = @"http://newstudio.tv/viewforum.php?f={0}";
         private static readonly Regex IdRegex = new Regex(@"f=(\d+)");
         private static readonly Regex OriginalTitle = new Regex(@"\/(.+)\(\d{4}\)");
+
         public NewStudioScraper(string url, string showsListUrl, long lastId) : base(url, showsListUrl, lastId)
         {
-
+            SiteTitle = "NewStudio.TV";
+            SiteTypeName = "newstudio";
+            using (var db = new AppDbContext())
+            {
+                SiteType = db.GetSiteTypeByName(SiteTypeName);
+            }
         }
 
         public override async Task<List<Show>> LoadShows()

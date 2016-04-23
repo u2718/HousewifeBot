@@ -16,6 +16,7 @@ namespace DAL
         public DbSet<Settings> Settings { get; set; }
         public DbSet<DownloadTask> DownloadTasks { get; set; }
         public DbSet<ShowNotification> ShowNotifications { get; set; }
+        public DbSet<SiteType> SiteTypes { get; set; }
 
         public AppDbContext() : base("DbConnection")
         {
@@ -94,6 +95,11 @@ namespace DAL
         public Notification GetNotificationById(int notificationId)
         {
             return Notifications.FirstOrDefault(n => n.Id == notificationId);
+        }
+
+        public SiteType GetSiteTypeByName(string siteTypeName)
+        {
+            return SiteTypes.FirstOrDefault(st => st.Name == siteTypeName);
         }
     }
 }

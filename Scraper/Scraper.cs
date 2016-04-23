@@ -19,6 +19,8 @@ namespace Scraper
 
         public int RetryCount { get; private set; }
         public string SiteTitle { get; protected set; }
+        public string SiteTypeName  { get; protected set; }
+        public SiteType SiteType { get; protected set; }
 
         protected Scraper(string url, string showsListUrl, long lastId)
         {
@@ -38,7 +40,6 @@ namespace Scraper
             {
                 Dictionary<string, Show> shows;
                 stop = LoadPage(GetPageUrlByNumber(pageNumber), out shows);
-
                 foreach (var show in shows)
                 {
                     if (showDictionary.ContainsKey(show.Key))
@@ -51,11 +52,12 @@ namespace Scraper
                     {
                         showDictionary.Add(show.Key, show.Value);
                     }
+                    show.Value.Episodes.ForEach(e => e.SiteType = SiteType);
                 }
                 pageNumber++;
             } while (!stop);
 
-            List<Show> result = showDictionary.Select(s => s.Value).ToList();
+            List<Show> result = showDictionary.Values.ToList();
             if (result.Count != 0)
             {
                 LastId = result.Aggregate(
