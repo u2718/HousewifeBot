@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using DAL;
@@ -21,6 +22,7 @@ namespace Scraper
         public string SiteTitle { get; protected set; }
         public string SiteTypeName  { get; protected set; }
         public SiteType SiteType { get; protected set; }
+        protected Encoding SiteEncoding { get; set; }
 
         protected Scraper(string url, string showsListUrl, long lastId)
         {
@@ -52,7 +54,6 @@ namespace Scraper
                     {
                         showDictionary.Add(show.Key, show.Value);
                     }
-                    show.Value.Episodes.ForEach(e => e.SiteType = SiteType);
                 }
                 pageNumber++;
             } while (!stop);
@@ -79,7 +80,7 @@ namespace Scraper
             {
                 try
                 {
-                    html = Encoding.UTF8.GetString(await Client.DownloadDataTaskAsync(url));
+                    html = SiteEncoding.GetString(await Client.DownloadDataTaskAsync(url));
                     break;
                 }
                 catch (Exception e)

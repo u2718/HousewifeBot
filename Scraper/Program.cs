@@ -38,7 +38,7 @@ namespace Scraper
             var scrapers = new List<Scraper>()
             {
                 new LostFilmScraper(@"https://www.lostfilm.tv/browse.php", "http://www.lostfilm.tv/serials.php", GetLastId("lostfilm")),
-                new NewStudioScraper(@"http://newstudio.tv/", @"http://newstudio.tv/", GetLastId("newstudio"))
+                new NewStudioScraper(@"http://newstudio.tv/tracker.php", @"http://newstudio.tv/", GetLastId("newstudio"))
             };
             var tasks = new List<Task>(scrapers.Count);
             foreach (var scraper in scrapers)
@@ -134,7 +134,7 @@ namespace Scraper
                 {
                     foreach (var show in showsList)
                     {
-                        Show dbShow = db.Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
+                        Show dbShow = db.SiteTypes.First(st => st.Name == scraper.SiteTypeName).Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
                         if (dbShow != null)
                         {
                             dbShow.OriginalTitle = show.OriginalTitle;
@@ -168,7 +168,7 @@ namespace Scraper
                 Logger.Debug("Retrieving last episode Id from database");
                 try
                 {
-                    lastId = db.Episodes?.Where(e => e.SiteType.Name == siteTypeName).OrderByDescending(s => s.SiteId).FirstOrDefault()?.SiteId ?? 14468;
+                    lastId = db.Episodes?.Where(e => e.Show.SiteType.Name == siteTypeName).Max(e => (int?)e.SiteId) ?? 14468;
                 }
                 catch (Exception e)
                 {

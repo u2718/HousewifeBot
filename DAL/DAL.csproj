@@ -98,6 +98,10 @@
     <Compile Include="Migrations\201604231037336_AddSiteType.Designer.cs">
       <DependentUpon>201604231037336_AddSiteType.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201605150701102_MoveSiteType.cs" />
+    <Compile Include="Migrations\201605150701102_MoveSiteType.Designer.cs">
+      <DependentUpon>201605150701102_MoveSiteType.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -147,6 +151,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201604231037336_AddSiteType.resx">
       <DependentUpon>201604231037336_AddSiteType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201605150701102_MoveSiteType.resx">
+      <DependentUpon>201605150701102_MoveSiteType.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

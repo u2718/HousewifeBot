@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DAL;
@@ -21,6 +22,7 @@ namespace Scraper
         {
             SiteTitle = "LostFilm.TV";
             SiteTypeName = "lostfilm";
+            SiteEncoding = Encoding.GetEncoding(1251);
             using (var db = new AppDbContext())
             {
                 SiteType = db.GetSiteTypeByName(SiteTypeName);
@@ -39,26 +41,10 @@ namespace Scraper
                 {
                     SiteId = int.Parse(ShowUrlRegex.Match(n.Attributes["href"].Value).Groups[1].Value),
                     Title = ruTitleRegex.Match(n.InnerHtml).Groups[1].Value,
-                    OriginalTitle = engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value
+                    OriginalTitle = engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value,
+                    SiteTypeId = this.SiteType.Id
                 }
                 ).ToList();
-
-            using (AppDbContext db = new AppDbContext())
-            {
-                foreach (var show in db.Shows.Where(s => s.SiteId == 0 || string.IsNullOrEmpty(s.OriginalTitle)))
-                {
-                    try
-                    {
-                        show.SiteId = shows.First(s => s.Title == show.Title).SiteId;
-                        show.OriginalTitle = shows.First(s => s.Title == show.Title).OriginalTitle;
-                    }
-                    catch (Exception e)
-                    {
-                        Program.Logger.Error(e, "An error occurred while updating SiteId or OriginalTitle");
-                    }
-                }
-                db.SaveChanges();
-            }
 
             using (AppDbContext db = new AppDbContext())
             {

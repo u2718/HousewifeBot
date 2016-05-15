@@ -11,6 +11,9 @@ namespace DAL
         public string OriginalTitle { get; set; }
         public string Description { get; set; }
         public virtual List<Episode> Episodes { get; set; } = new List<Episode>();
+        public int SiteTypeId { get; set; }
+        
+        public virtual SiteType SiteType { get; set; }
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTimeOffset? DateCreated { get; set; }
 
