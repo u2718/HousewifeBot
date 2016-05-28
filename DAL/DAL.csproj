@@ -102,6 +102,10 @@
     <Compile Include="Migrations\201605150701102_MoveSiteType.Designer.cs">
       <DependentUpon>201605150701102_MoveSiteType.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201605281514168_AddEpisodeNumber.cs" />
+    <Compile Include="Migrations\201605281514168_AddEpisodeNumber.Designer.cs">
+      <DependentUpon>201605281514168_AddEpisodeNumber.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -154,6 +158,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201605150701102_MoveSiteType.resx">
       <DependentUpon>201605150701102_MoveSiteType.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201605281514168_AddEpisodeNumber.resx">
+      <DependentUpon>201605281514168_AddEpisodeNumber.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
