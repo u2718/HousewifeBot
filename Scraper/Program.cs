@@ -13,9 +13,10 @@ namespace Scraper
     public class Program
     {
         public static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Dictionary<string, int> LastStoredEpisodesId = new Dictionary<string, int>() { { "lostfilm", 14468 }, { "newstudio", 19131 } };
 
         private static int updateInterval;
-
+                    
         public static void Main()
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
@@ -141,7 +142,7 @@ namespace Scraper
         {
             using (var db = new AppDbContext())
             {
-                return db.Episodes?.Where(e => e.Show.SiteType.Name == siteTypeName).Max(e => (int?)e.SiteId) ?? 14468;
+                return db.Episodes?.Where(e => e.Show.SiteType.Name == siteTypeName).Max(e => (int?)e.SiteId) ?? LastStoredEpisodesId[siteTypeName];
             }
         }
     }

@@ -14,9 +14,16 @@ namespace Scraper
     {
         private const string ShowPageUrl = @"http://newstudio.tv/viewforum.php?f={0}";
         private const string SiteUrl = @"http://newstudio.tv";
-        private static readonly Regex EpisodeNumberRegex = new Regex(@".+?\(.+?,\s* Серия\s*(\d+)\)");
+        private static readonly Regex EpisodeNumberRegex = new Regex(@".+?\(Сезон\s*(\d+),\s* Серия\s*(\d+)\)");
+        private static readonly Regex SeasonNumberRegex = new Regex(@"Сезон\s*(\d+)");
         private static readonly Regex IdRegex = new Regex(@"f=(\d+)");
         private static readonly Regex OriginalTitleRegex = new Regex(@"\/(.+)\(\d{4}\)");
+        private static readonly Regex EpisodeSiteIdRegex = new Regex(@"\?t=(\d+)");
+        private static readonly Regex EpisodeRussianTitleRegex = new Regex(@"Русскоязычное название:\s*</span>\s*(.+?)<span");
+        private static readonly Regex EpisodeTitleRegex = new Regex(@"Название серии:\s*</span>\s*(.+?)<span");
+        private static readonly Regex SeasonTitleRegex = new Regex(@"Сезон:\s*</span>\s*(.+?)<span");
+        private static readonly Regex EpisodeDateRegex = new Regex(@"(\d{2}-.+?-\d{2}).+?(\d{2}:\d{2})");
+        private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
 
         public NewStudioScraper(long lastStoredEpisodeId) : base(lastStoredEpisodeId)
         {
@@ -63,23 +70,84 @@ namespace Scraper
         {
             var doc = DownloadDocument(url).Result;
             var episodeNodes = doc.DocumentNode.SelectNodes(@"//table[@class='table well well-small']//a[@class='genmed']");
-            var episodes = new HashSet<Tuple<string, int>>();
-            var detailsUrls = new List<string>();
-            foreach (var node in episodeNodes)
+            var dateNodes = doc.DocumentNode.SelectNodes(@"//table[@class='table well well-small']//td[@class='row4 small']");
+            var episodes = new HashSet<Tuple<string, int, int>>();
+            var showDictionary = new Dictionary<string, Show>();
+            for (int i = 0; i < episodeNodes.Count; i++)
             {
-                var detailsUrl = SiteUrl + node.Attributes["href"].Value;
-                var title = OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim();
-                var episodeNumber = int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[1].Value);
-                if (episodes.Contains(Tuple.Create(title, episodeNumber)))
+                var currentNode = episodeNodes[i];
+                var detailsUrl = SiteUrl + currentNode.Attributes["href"].Value;
+                var showTitle = OriginalTitleRegex.Match(currentNode.InnerText).Groups[1].Value.Trim();
+
+                if (IsAlreadyAdded(currentNode, showTitle, ref episodes))
                 {
                     continue;
                 }
 
-                episodes.Add(Tuple.Create(title, episodeNumber));
-                detailsUrls.Add(detailsUrl);
+                var episode = CreateEpisode(currentNode, detailsUrl, dateNodes[i]);
+                if (episode == null)
+                {
+                    break;
+                }
+
+                if (!showDictionary.ContainsKey(showTitle))
+                {
+                    showDictionary.Add(showTitle, new Show { Title = showTitle, SiteType = ShowsSiteType });
+                }
+
+                showDictionary[showTitle].Episodes.Add(episode);
             }
 
-            return null;
+            return showDictionary;
+        }
+
+        private static bool IsAlreadyAdded(HtmlNode node, string showTitle, ref HashSet<Tuple<string, int, int>> episodesSet)
+        {
+            int seasonNumber = GetSeasonNumber(node);
+            int episodeNumber = GetEpisodeNumber(node);
+            if (episodesSet.Contains(Tuple.Create(showTitle, seasonNumber, episodeNumber)))
+            {
+                return true;
+            }
+
+            episodesSet.Add(Tuple.Create(showTitle, seasonNumber, episodeNumber));
+            return false;
+        }
+
+        private static int GetSeasonNumber(HtmlNode node)
+        {
+            return int.Parse(SeasonNumberRegex.Match(node.InnerText).Groups[1].Value);
+        }
+
+        private static int GetEpisodeNumber(HtmlNode node)
+        {
+            return EpisodeNumberRegex.IsMatch(node.InnerText) ? int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[2].Value) : 0;
+        }
+
+        private Episode CreateEpisode(HtmlNode node, string detailsUrl, HtmlNode dateNode)
+        {
+            var episode = new Episode();
+            episode.SiteId = int.Parse(EpisodeSiteIdRegex.Match(detailsUrl).Groups[1].Value);
+            if (episode.SiteId <= LastStoredEpisodeId)
+            {
+                return null;
+            }
+
+            episode.SeasonNumber = GetSeasonNumber(node);
+            episode.EpisodeNumber = GetEpisodeNumber(node);
+            episode.Title = GetEpisodeTitle(detailsUrl);
+            var dateMatch = EpisodeDateRegex.Match(dateNode.InnerText);
+            string date = $"{dateMatch.Groups[1].Value} {dateMatch.Groups[2].Value}";
+            if (!string.IsNullOrEmpty(date))
+            {
+                DateTime tempDateTime;
+                if (DateTime.TryParse(date, out tempDateTime))
+                {
+                    episode.Date = new DateTimeOffset(tempDateTime, SiteTimeZoneInfo.BaseUtcOffset);
+                }
+            }
+
+            return episode;
         }
 
         private async Task<string> GetOriginalTitle(int showId)
@@ -98,9 +166,38 @@ namespace Scraper
             return node == null ? string.Empty : OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim();
         }
 
-        private Episode LoadEpisode(string url)
+        private string GetEpisodeTitle(string url)
         {
-            return null;
+            HtmlDocument doc;
+            try
+            {
+                doc = DownloadDocument(url).Result;
+            }
+            catch (WebException)
+            {
+                return string.Empty;
+            }
+
+            var details = doc.DocumentNode.SelectSingleNode("//div[@class='post_wrap']").InnerHtml;
+            string title;
+            if (EpisodeRussianTitleRegex.IsMatch(details))
+            {
+                title = EpisodeRussianTitleRegex.Match(details).Groups[1].Value;
+            }
+            else if (EpisodeTitleRegex.IsMatch(details))
+            {
+                title = EpisodeTitleRegex.Match(details).Groups[1].Value;
+            }
+            else if (EpisodeNumberRegex.IsMatch(details))
+            {
+                title = $"{EpisodeNumberRegex.Match(details).Groups[1].Value} серия";
+            }
+            else
+            {
+                title = $"{SeasonTitleRegex.Match(details).Groups[1].Value} сезон полностью";
+            }
+
+            return title;
         }
     }
 }
