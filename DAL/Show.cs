@@ -17,7 +17,6 @@ namespace DAL
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTimeOffset? DateCreated { get; set; }
 
-        // override object.Equals
         public override bool Equals(object obj)
         {
             Show s = obj as Show;
@@ -29,7 +28,6 @@ namespace DAL
             return SiteId == s.SiteId;
         }
 
-        // override object.GetHashCode
         public override int GetHashCode()
         {
             return SiteId.GetHashCode();

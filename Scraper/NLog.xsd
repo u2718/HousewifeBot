@@ -1317,7 +1317,7 @@
         </xs:attribute>
         <xs:attribute name="clientId" type="SimpleLayoutAttribute">
           <xs:annotation>
-            <xs:documentation>Client ID.</xs:documentation>
+            <xs:documentation>client ID.</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="includeEventProperties" type="xs:boolean">
