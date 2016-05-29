@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ namespace Scraper
 
         private static readonly Regex DateRegex = new Regex(@"Дата:\s*<b>(\d\d\.\d\d\.\d\d\d\d\s*\d\d:\d\d)<\/b>");
         private static readonly Regex IdRegex = new Regex(@"id=(\d+)");
+        private static readonly Regex EpisodeNumberRegex = new Regex(@"s=(\d+).*?&e=(\d+)");
         private static readonly Regex ShowUrlRegex = new Regex(@"/browse\.php\?cat=(\d+)");
         private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
 
@@ -42,8 +44,8 @@ namespace Scraper
                 new Show()
                 {
                     SiteId = int.Parse(ShowUrlRegex.Match(n.Attributes["href"].Value).Groups[1].Value),
-                    Title = rusTitleRegex.Match(n.InnerHtml).Groups[1].Value,
-                    OriginalTitle = engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value,
+                    Title = WebUtility.HtmlDecode(rusTitleRegex.Match(n.InnerHtml).Groups[1].Value),
+                    OriginalTitle = WebUtility.HtmlDecode(engTitleRegex.Match(n.Element("span").InnerText).Groups[1].Value),
                     SiteTypeId = ShowsSiteType.Id
                 })
                 .ToList();
@@ -72,11 +74,6 @@ namespace Scraper
         protected override Dictionary<string, Show> LoadPage(string url)
         {
             var doc = DownloadDocument(url).Result;
-            if (doc == null)
-            {
-                throw new ArgumentNullException(nameof(doc));
-            }
-
             var showTitles =
                 doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
                     ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
@@ -92,17 +89,26 @@ namespace Scraper
                             ? IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value
                             : null)
                     .ToArray();
-            if (showTitles == null || episodesTitles == null || episodesIds == null)
+            var episodesNumbers =
+                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//a[@class='a_discuss']")
+                    ?.Select(
+                        s => s?.Attributes["href"] != null
+                            ? Tuple.Create(
+                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[1].Value), 
+                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[2].Value))
+                            : null)
+                    .ToArray();
+            if (showTitles == null || episodesTitles == null || episodesIds == null || episodesNumbers == null)
             {
                 throw new ArgumentException("Invalid web page", nameof(doc));
             }
 
             var dateList = doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']").First()?.InnerHtml;
-            var dates = dateList != null ? DateRegex.Matches(dateList).Cast<Match>().Select(m => m.Groups[1].Value).ToArray() : null; // TODO: test for null reference
+            var dates = dateList != null ? DateRegex.Matches(dateList).Cast<Match>().Select(m => m.Groups[1].Value).ToArray() : null;
             var showDictionary = new Dictionary<string, Show>();
             for (int i = 0; i < showTitles.Length; i++)
             {
-                var episode = CreateEpisode(episodesIds[i], episodesTitles[i], dates?[i]);
+                var episode = CreateEpisode(episodesIds[i], episodesTitles[i], dates?[i], episodesNumbers[i]);
                 if (episode == null)
                 {
                     break;
@@ -140,21 +146,21 @@ namespace Scraper
                     .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .ToList();
 
-            return descriptionParts
-                .GetRange(1, descriptionParts.Count - 1)
-                .Aggregate(string.Empty, (s, s1) => s + s1 + "\n");
+            return WebUtility.HtmlDecode(descriptionParts.GetRange(1, descriptionParts.Count - 1).Aggregate(string.Empty, (s, s1) => s + s1 + "\n"));
         }
 
-        private Episode CreateEpisode(string episodeId, string title, string date)
+        private Episode CreateEpisode(string episodeId, string title, string date, Tuple<int, int> episodeNumber)
         {
             var episode = new Episode();
-            episode.Title = title;
             episode.SiteId = int.Parse(episodeId);
             if (episode.SiteId <= LastStoredEpisodeId)
             {
                 return null;
             }
 
+            episode.SeasonNumber = episodeNumber.Item1;
+            episode.EpisodeNumber = episodeNumber.Item2 != 99 ? episodeNumber.Item2 : 0;
+            episode.Title = WebUtility.HtmlDecode(title);
             if (!string.IsNullOrEmpty(date))
             {
                 DateTime tempDateTime;
