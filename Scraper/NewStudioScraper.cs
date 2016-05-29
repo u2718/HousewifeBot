@@ -46,7 +46,7 @@ namespace Scraper
             var shows = showNodes.Select(n => new Show()
             {
                 SiteId = int.Parse(IdRegex.Match(n.Attributes["href"].Value).Groups[1].Value),
-                Title = n.InnerText,
+                Title = WebUtility.HtmlDecode(n.InnerText),
                 SiteTypeId = ShowsSiteType.Id
             }).ToList();
             using (var db = new AppDbContext())
@@ -77,7 +77,7 @@ namespace Scraper
             {
                 var currentNode = episodeNodes[i];
                 var detailsUrl = SiteUrl + currentNode.Attributes["href"].Value;
-                var showTitle = OriginalTitleRegex.Match(currentNode.InnerText).Groups[1].Value.Trim();
+                var showTitle = GetShowTitle(currentNode);
 
                 if (IsAlreadyAdded(currentNode, showTitle, ref episodes))
                 {
@@ -112,6 +112,11 @@ namespace Scraper
 
             episodesSet.Add(Tuple.Create(showTitle, seasonNumber, episodeNumber));
             return false;
+        }
+
+        private static string GetShowTitle(HtmlNode currentNode)
+        {
+            return WebUtility.HtmlDecode(OriginalTitleRegex.Match(currentNode.InnerText).Groups[1].Value.Trim());
         }
 
         private static int GetSeasonNumber(HtmlNode node)
@@ -163,7 +168,7 @@ namespace Scraper
             }
 
             var node = doc.DocumentNode.SelectSingleNode(@"//div[@class='topic-list']/a/b");
-            return node == null ? string.Empty : OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim();
+            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim());
         }
 
         private string GetEpisodeTitle(string url)
@@ -190,14 +195,14 @@ namespace Scraper
             }
             else if (EpisodeNumberRegex.IsMatch(details))
             {
-                title = $"{EpisodeNumberRegex.Match(details).Groups[1].Value} серия";
+                title = $"{EpisodeNumberRegex.Match(details).Groups[2].Value} серия";
             }
             else
             {
                 title = $"{SeasonTitleRegex.Match(details).Groups[1].Value} сезон полностью";
             }
 
-            return title;
+            return WebUtility.HtmlDecode(title);
         }
     }
 }
