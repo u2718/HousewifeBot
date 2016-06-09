@@ -10,16 +10,17 @@ namespace HousewifeBot
         public const string SubscribeCommandFormat = "/s_{0}";
         private const int MaxPageSize = 50;
 
-        public int? ShowId { get; set; }
-
         public SubscribeCommand()
         {
 
         }
+
         public SubscribeCommand(int showId)
         {
             ShowId = showId;
         }
+
+        public int? ShowId { get; set; }
 
         public override void Execute()
         {
@@ -28,18 +29,10 @@ namespace HousewifeBot
             bool subscribeById = ShowId != null;
             if (ShowId == null)
             {
-                int messageSize;
-                int.TryParse(Arguments, out messageSize);
-                if (messageSize == 0)
-                {
-                    messageSize = MaxPageSize;
-                }
-                messageSize = Math.Min(messageSize, MaxPageSize);
-
                 ShowId = RequestShow(out showTitle);
                 if (ShowId == null)
                 {
-                    SendShowList(showTitle, messageSize);
+                    SendShowList(showTitle, GetMessageSize());
                     Status = true;
                     return;
                 }
@@ -63,20 +56,13 @@ namespace HousewifeBot
                     {
                         throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
                     }
+
                     Status = true;
                     return;
                 }
 
                 Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
-                User user;
-                try
-                {
-                    user = db.GetUserByTelegramId(Message.From.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
-                }
+                var user = db.GetUserByTelegramId(Message.From.Id);
                 bool newUser = false;
                 if (user == null)
                 {
@@ -87,28 +73,12 @@ namespace HousewifeBot
                         LastName = Message.From.LastName,
                         Username = Message.From.Username
                     };
+
                     newUser = true;
                 }
 
-                if (newUser)
-                {
-                    Program.Logger.Info($"{GetType().Name}: {user} is new User");
-                }
-                else
-                {
-                    Program.Logger.Debug($"{GetType().Name}: User {user} is already exist");
-                }
-
-                bool subscriptionExists;
                 Program.Logger.Debug($"{GetType().Name}: Checking for subscription existence");
-                try
-                {
-                    subscriptionExists = user.Subscriptions.Any(s => s.Show.Id == show.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while checking for subscription existence", e);
-                }
+                var subscriptionExists = user.Subscriptions.Any(s => s.Show.Id == show.Id);
                 if (subscriptionExists)
                 {
                     Program.Logger.Info($"{GetType().Name}: User {Message.From} is already subscribed to {show.OriginalTitle}");
@@ -116,34 +86,12 @@ namespace HousewifeBot
                 }
                 else
                 {
-                    Subscription subscription = new Subscription
-                    {
-                        User = user,
-                        Show = show,
-                        SubscriptionDate = DateTimeOffset.Now
-                    };
-
-                    if (newUser)
-                    {
-                        user.Subscriptions.Add(subscription);
-                        db.Users.Add(user);
-                    }
-                    else
-                    {
-                        db.Subscriptions.Add(subscription);
-                    }
+                    Subscribe(db, user, show, newUser);
                     response = $"Вы подписались на сериал '{show.Title}'";
                 }
 
                 Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
-                }
+                db.SaveChanges();
             }
 
             Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
@@ -157,6 +105,39 @@ namespace HousewifeBot
             }
 
             Status = true;
+        }
+
+        private static void Subscribe(AppDbContext db, User user, Show show, bool newUser)
+        {
+            Subscription subscription = new Subscription
+            {
+                User = user,
+                Show = show,
+                SubscriptionDate = DateTimeOffset.Now
+            };
+
+            if (newUser)
+            {
+                user.Subscriptions.Add(subscription);
+                db.Users.Add(user);
+            }
+            else
+            {
+                db.Subscriptions.Add(subscription);
+            }
+        }
+
+        private int GetMessageSize()
+        {
+            int messageSize;
+            int.TryParse(Arguments, out messageSize);
+            if (messageSize == 0)
+            {
+                messageSize = MaxPageSize;
+            }
+
+            messageSize = Math.Min(messageSize, MaxPageSize);
+            return messageSize;
         }
 
         private int? RequestShow(out string showTitle)
@@ -192,15 +173,9 @@ namespace HousewifeBot
             using (AppDbContext db = new AppDbContext())
             {
                 Program.Logger.Debug($"{GetType().Name}: Searching show {showTitle} in database");
-                try
-                {
-                    show = db.GetShowByTitle(showTitle);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching show {showTitle} in database", e);
-                }
+                show = db.GetShowByTitle(showTitle);
             }
+
             return show?.Id;
         }
 

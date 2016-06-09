@@ -15,18 +15,8 @@ namespace HousewifeBot
             {
                 do
                 {
-                    User user;
-                    Program.Logger.Debug(
-                    $"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
-                    try
-                    {
-                        user = db.GetUserByTelegramId(Message.From.Id);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
-                    }
-
+                    Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
+                    var user = db.GetUserByTelegramId(Message.From.Id);
                     if (user == null)
                     {
                         Program.Logger.Debug($"{GetType().Name}: User with TelegramId: {Message.From.Id} is not found");
@@ -34,18 +24,7 @@ namespace HousewifeBot
                         break;
                     }
 
-
-                    IQueryable<Subscription> subscriptions;
-                    Program.Logger.Debug($"{GetType().Name}: Retrieving subscriptions of {user}");
-                    try
-                    {
-                        subscriptions = db.Subscriptions.Where(s => s.User.Id == user.Id);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception($"{GetType().Name}: An error occurred while retrieving subscriptions of {user}", e);
-                    }
-
+                    var subscriptions = user.Subscriptions;
                     if (!subscriptions.Any())
                     {
                         Program.Logger.Debug($"{GetType().Name}: {user} has no subscriptions");
@@ -56,8 +35,7 @@ namespace HousewifeBot
                     Program.Logger.Debug($"{GetType().Name}: Sending the confirmation message to {user}");
                     try
                     {
-                        TelegramApi.SendMessage(Message.From,
-                            "Вы действительно хотите отписаться от всех сериалов?\n/yes /no");
+                        TelegramApi.SendMessage(Message.From, "Вы действительно хотите отписаться от всех сериалов?\n/yes /no");
                     }
                     catch (Exception e)
                     {
@@ -82,40 +60,19 @@ namespace HousewifeBot
                     }
 
                     Program.Logger.Debug($"{GetType().Name}: Deleting notifications for all subscriptions");
-                    try
+                    foreach (var subscription in subscriptions)
                     {
-                        db.Notifications.RemoveRange(
-                            db.Notifications.Where(n => subscriptions.Any(s => s.Id == n.Subscription.Id))
-                            );
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception(
-                                $"{GetType().Name}: An error occurred while deleting notifications for all subscription", e);
+                        db.Notifications.RemoveRange(db.Notifications.Where(n => n.Subscription.Id == subscription.Id));
                     }
 
                     Program.Logger.Debug($"{GetType().Name}: Deleting all subscriptions");
-                    try
-                    {
-                        db.Subscriptions.RemoveRange(subscriptions);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception($"{GetType().Name}: An error occurred while deleting all subscriptions", e);
-                    }
-
+                    db.Subscriptions.RemoveRange(subscriptions);
                     response = "Вы отписались от всех сериалов";
-                } while (false);
+                }
+                while (false);
 
                 Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
-                }
+                db.SaveChanges();
             }
 
             Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");

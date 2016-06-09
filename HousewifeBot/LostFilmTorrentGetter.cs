@@ -15,24 +15,27 @@ namespace HousewifeBot
         private const string LoginUrl = @"https://login1.bogi.ru/login.php?referer=https%3A%2F%2Fwww.lostfilm.tv%2F";
         private const string DetailsUrl = @"http://www.lostfilm.tv/details.php?id={0}";
         private const string DownloadsUrl = @"https://www.lostfilm.tv/nrdr.php?c={0}&s={1}&e={2}";
-        private readonly char[] CharsToReplace = {' ', '-'};
+        private static readonly Regex ParametersRegex = new Regex(@"ShowAllReleases\(\'(.+?)\',\s*\'(.+?)\',\s*\'(.+?)\'\)");
+        private static readonly Regex UrlRegex = new Regex(@"action=""(.+?)""");
+        private static readonly Regex InputRegex = new Regex(@"<input.*name=""(.+?)"".*value=""(.+?)""");
+        private static readonly Regex SizeRegex = new Regex(@"Размер: (.+)\.");
+        private static readonly Regex QualityRegex = new Regex(@"Видео: (.+?)\.");
 
-        private HttpClient _client;
+        private readonly char[] charsToReplace = { ' ', '-' };
+
+        private HttpClient client;
 
         public List<TorrentDescription> GetEpisodeTorrents(Episode episode, string login, string password)
         {
-            _client = Login(login, password);
-            string detailsContent = _client.GetAsync(string.Format(DetailsUrl, episode.SiteId)).Result.Content.ReadAsStringAsync().Result;
-
-            Match parametersMatch = Regex.Match(detailsContent, @"ShowAllReleases\(\'(.+?)\',\s*\'(.+?)\',\s*\'(.+?)\'\)");
-
+            client = Login(login, password);
+            string detailsContent = client.GetAsync(string.Format(DetailsUrl, episode.SiteId)).Result.Content.ReadAsStringAsync().Result;
+            Match parametersMatch = ParametersRegex.Match(detailsContent);
             if (!parametersMatch.Success)
             {
                 throw new Exception();
             }
 
             IEnumerable<TorrentDescription> torrents = GetTorrents(parametersMatch.Groups[1].Value, parametersMatch.Groups[2].Value, parametersMatch.Groups[3].Value);
-
             return torrents.ToList();
         }
 
@@ -42,7 +45,7 @@ namespace HousewifeBot
         /// <param name="login"></param>
         /// <param name="password"></param>
         /// <returns>HttpClient with required cookies</returns>
-        private HttpClient Login(string login, string password)
+        private static HttpClient Login(string login, string password)
         {
             CookieContainer cc = new CookieContainer();
             HttpClientHandler handler = new HttpClientHandler
@@ -52,49 +55,44 @@ namespace HousewifeBot
                 UseProxy = false
             };
 
-            HttpClient client = new HttpClient(handler);
+            HttpClient httpClient = new HttpClient(handler);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, LoginUrl)
             {
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    {"login", login},
-                    {"password", password},
-                    {"module", "1"},
-                    {"target", "http://www.lostfilm.tv/"},
-                    {"repage", "user"},
-                    {"act", "login"}
+                    { "login", login },
+                    { "password", password },
+                    { "module", "1" },
+                    { "target", "http://www.lostfilm.tv/" },
+                    { "repage", "user" },
+                    { "act", "login" }
                 })
             };
 
-            string response = client.SendAsync(request).Result.Content.ReadAsStringAsync().Result;
-
-            string url = Regex.Match(response, @"action=""(.+?)""").Groups[1].Value;
-
+            string response = httpClient.SendAsync(request).Result.Content.ReadAsStringAsync().Result;
+            string url = UrlRegex.Match(response).Groups[1].Value;
             if (string.IsNullOrEmpty(url))
             {
                 throw new Exception("An error occurred while retrieving URL. Login/password is probably incorrect.");
             }
 
-            Regex inputRegex = new Regex(@"<input.*name=""(.+?)"".*value=""(.+?)""");
             List<KeyValuePair<string, string>> formDictionary = response.Split('\n')
-                .Where(s => inputRegex.IsMatch(s))
-                .Select(s => new KeyValuePair<string, string>(inputRegex.Match(s).Groups[1].Value, inputRegex.Match(s).Groups[2].Value))
+                .Where(s => InputRegex.IsMatch(s))
+                .Select(s => new KeyValuePair<string, string>(InputRegex.Match(s).Groups[1].Value, InputRegex.Match(s).Groups[2].Value))
                 .ToList();
-
             FormUrlEncodedContent content = new FormUrlEncodedContent(formDictionary);
-
             request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = content
             };
 
-            client.SendAsync(request).Wait();
-            return client;
+            httpClient.SendAsync(request).Wait();
+            return httpClient;
         }
 
         private IEnumerable<TorrentDescription> GetTorrents(string showId, string seasonNumber, string episodeNumber)
         {
-            string downloadsContent = Encoding.GetEncoding(1251).GetString(_client.GetAsync(string.Format(DownloadsUrl, showId, seasonNumber, episodeNumber)).Result.Content.ReadAsByteArrayAsync().Result);
+            string downloadsContent = Encoding.GetEncoding(1251).GetString(client.GetAsync(string.Format(DownloadsUrl, showId, seasonNumber, episodeNumber)).Result.Content.ReadAsByteArrayAsync().Result);
             HtmlDocument document = new HtmlDocument();
             document.LoadHtml(downloadsContent);
 
@@ -107,19 +105,15 @@ namespace HousewifeBot
                 string description = node.InnerText;
                 description = description.Substring(0, description.IndexOf('\n'));
                 string uri = node.Element("div").Element("nobr").Element("a").InnerHtml;
-
-                Match sizeMatch = Regex.Match(description, @"Размер: (.+)\.");
-                Match qualityMatch = Regex.Match(description, @"Видео: (.+?)\.");
-
                 TorrentDescription torrentDescription = new TorrentDescription()
                 {
                     TorrentUri = new Uri(uri),
                     Description = description,
-                    Size = sizeMatch.Success ? sizeMatch.Groups[1].Value : string.Empty,
-                    Quality = qualityMatch.Success ? qualityMatch.Groups[1].Value : string.Empty
+                    Size = SizeRegex.IsMatch(description) ? SizeRegex.Match(description).Groups[1].Value : string.Empty,
+                    Quality = QualityRegex.IsMatch(description) ? QualityRegex.Match(description).Groups[1].Value : string.Empty
                 };
 
-                foreach (char c in CharsToReplace)
+                foreach (char c in charsToReplace)
                 {
                     torrentDescription.Quality = torrentDescription.Quality.Replace(c, '_');
                 }
@@ -129,7 +123,5 @@ namespace HousewifeBot
 
             return torrents;
         }
-
-
     }
 }

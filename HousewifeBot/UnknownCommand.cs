@@ -2,7 +2,7 @@
 
 namespace HousewifeBot
 {
-    class UnknownCommand : Command
+    public class UnknownCommand : Command
     {
         public override void Execute()
         {

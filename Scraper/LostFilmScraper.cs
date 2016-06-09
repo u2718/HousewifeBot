@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DAL;
+using HtmlAgilityPack;
 
 namespace Scraper
 {
@@ -71,34 +72,20 @@ namespace Scraper
             return shows;
         }
 
+        protected override string GetPageUrlByNumber(int pageNumber)
+        {
+            return Url + $"?o={pageNumber * 15}";
+        }
+
         protected override Dictionary<string, Show> LoadPage(string url)
         {
             var doc = DownloadDocument(url).Result;
-            var showTitles =
-                doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
-                    ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
-                    .ToArray();
-            var episodesTitles =
-                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//span[@class='torrent_title']//b")
-                    ?.Select(s => s?.InnerText?.Trim())
-                    .ToArray();
-            var episodesIds =
-                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//a[@class='a_details']")
-                    ?.Select(
-                        s => s?.Attributes["href"] != null
-                            ? IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value
-                            : null)
-                    .ToArray();
-            var episodesNumbers =
-                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//a[@class='a_discuss']")
-                    ?.Select(
-                        s => s?.Attributes["href"] != null
-                            ? Tuple.Create(
-                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[1].Value), 
-                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[2].Value))
-                            : null)
-                    .ToArray();
-            if (showTitles == null || episodesTitles == null || episodesIds == null || episodesNumbers == null)
+            string[] showTitles;
+            string[] episodesTitles;
+            string[] episodesIds;
+            Tuple<int, int>[] episodesNumbers;
+            bool success = GetEpiodesData(doc, out showTitles, out episodesTitles, out episodesIds, out episodesNumbers);
+            if (!success)
             {
                 throw new ArgumentException("Invalid web page", nameof(doc));
             }
@@ -125,9 +112,32 @@ namespace Scraper
             return showDictionary;
         }
 
-        protected override string GetPageUrlByNumber(int pageNumber)
+        private static bool GetEpiodesData(HtmlDocument doc, out string[] showTitles, out string[] episodesTitles, out string[] episodesIds, out Tuple<int, int>[] episodesNumbers)
         {
-            return Url + $"?o={pageNumber * 15}";
+            showTitles =
+                doc.DocumentNode.SelectNodes(@"//div[@class='mid']//div[@class='content_body']//a//img")
+                    ?.Select(s => s?.Attributes["title"]?.Value?.Trim())
+                    .ToArray();
+            episodesTitles =
+                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//span[@class='torrent_title']//b")
+                    ?.Select(s => s?.InnerText?.Trim())
+                    .ToArray();
+            episodesIds = doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//a[@class='a_details']")
+                ?.Select(
+                    s => s?.Attributes["href"] != null
+                        ? IdRegex.Match(s.Attributes["href"].Value).Groups[1].Value
+                        : null)
+                .ToArray();
+            episodesNumbers =
+                doc.DocumentNode.SelectNodes("//div[@class='mid']//div[@class='content_body']//a[@class='a_discuss']")
+                    ?.Select(
+                        s => s?.Attributes["href"] != null
+                            ? Tuple.Create(
+                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[1].Value),
+                                int.Parse(EpisodeNumberRegex.Match(s.Attributes["href"].Value).Groups[2].Value))
+                            : null)
+                    .ToArray();
+            return !(showTitles == null || episodesTitles == null || episodesIds == null || episodesNumbers == null);
         }
 
         private string LoadShowDescription(Show show)

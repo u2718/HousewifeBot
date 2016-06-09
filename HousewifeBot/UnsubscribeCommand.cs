@@ -9,104 +9,74 @@ namespace HousewifeBot
     {
         public const string UnsubscribeCommandFormat = "/u_{0}";
         private const int MaxPageSize = 50;
-        public int? ShowId { get; set; }
 
         public UnsubscribeCommand(int? showId = null)
         {
             ShowId = showId;
         }
-       
+
+        public int? ShowId { get; set; }
+
         public override void Execute()
         {
-            string response = null;
-            do
+            using (var db = new AppDbContext())
             {
-                User user = GetUser(Message.From);
-                if (user == null || !UserHasSubscriptions(user))
+                User user = db.GetUserByTelegramId(Message.From.Id);
+                if (user == null || !user.Subscriptions.Any())
                 {
-                    response = "Вы не подписаны ни на один сериал";
-                    break;
+                    SendResponse("Вы не подписаны ни на один сериал");
+                    Status = true;
+                    return;
                 }
 
                 if (ShowId != null)
                 {
-                    Show show;
-                    using (AppDbContext db = new AppDbContext())
-                    {
-                        show = db.GetShowById(ShowId.Value);
-                    }
+                    var show = db.GetShowById(ShowId.Value);
                     if (show == null)
                     {
-                        response = $"Сериал с идентификатором {ShowId} не найден";
-                        break;
+                        SendResponse($"Сериал с идентификатором {ShowId} не найден");
                     }
-                    response = Unsubscribe(user, show);
+                    else
+                    {
+                        var response = Unsubscribe(user, show);
+                        SendResponse(response);
+                    }
                 }
                 else
                 {
-                    int messageSize;
-                    int.TryParse(Arguments, out messageSize);
-                    if (messageSize == 0)
-                    {
-                        messageSize = MaxPageSize;
-                    }
-                    messageSize = Math.Min(messageSize, MaxPageSize);
-                    SendSubscriptions(user, messageSize);
-                }
-            } while (false);
-
-            if (!string.IsNullOrEmpty(response))
-            {
-                Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
-                try
-                {
-                    TelegramApi.SendMessage(Message.From, response);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
+                    SendSubscriptions(user, GetMessageSize());
                 }
             }
+
             Status = true;
         }
-        private bool UserHasSubscriptions(User user)
+
+        private void SendResponse(string response)
         {
-            if (user == null)
+            Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
+            try
             {
-                Program.Logger.Debug($"{GetType().Name}: User {Message.From} is not exists");
-                return false;
+                TelegramApi.SendMessage(Message.From, response);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
+            }
+        }
+
+        private int GetMessageSize()
+        {
+            int messageSize;
+            int.TryParse(Arguments, out messageSize);
+            if (messageSize == 0)
+            {
+                messageSize = MaxPageSize;
             }
 
-            bool userHasSubscriptions;
-            using (AppDbContext db = new AppDbContext())
-            {
-                Program.Logger.Debug($"{GetType().Name}: Checking if user has subscriptions");
-                try
-                {
-                    userHasSubscriptions = db.Subscriptions.Any(s => s.User.Id == user.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while checking if user has subscriptions", e);
-                }
-            }
-            return userHasSubscriptions;
+            messageSize = Math.Min(messageSize, MaxPageSize);
+            return messageSize;
         }
-        private User GetUser(Telegram.User user)
-        {
-            using (AppDbContext db = new AppDbContext())
-            {
-                Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {user.Id} in database");
-                try
-                {
-                    return db.GetUserByTelegramId(user.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
-                }
-            }
-        }
+
         private string Unsubscribe(User user, Show show)
         {
             string response;
@@ -122,6 +92,7 @@ namespace HousewifeBot
                 {
                     throw new Exception($"{GetType().Name}: An error occurred while checking for subscription existence", e);
                 }
+
                 if (subscription != null)
                 {
                     Program.Logger.Debug($"{GetType().Name}: Deleting notifications for subscription");
@@ -152,6 +123,7 @@ namespace HousewifeBot
                     {
                         throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                     }
+
                     response = $"Вы отписались от сериала \"{show.Title}\"";
                 }
                 else
@@ -159,6 +131,7 @@ namespace HousewifeBot
                     response = $"Вы, братишка, не подписаны на сериал \"{show.Title}\"";
                 }
             }
+
             return response;
         }
 
