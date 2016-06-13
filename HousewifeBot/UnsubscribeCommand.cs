@@ -124,11 +124,11 @@ namespace HousewifeBot
                         throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
                     }
 
-                    response = $"Вы отписались от сериала \"{show.Title}\"";
+                    response = $"Вы отписались от сериала \"{show.Title}\" ({show.SiteType.Title})";
                 }
                 else
                 {
-                    response = $"Вы, братишка, не подписаны на сериал \"{show.Title}\"";
+                    response = $"Вы, братишка, не подписаны на сериал \"{show.Title}\" ({show.SiteType.Title})";
                 }
             }
 

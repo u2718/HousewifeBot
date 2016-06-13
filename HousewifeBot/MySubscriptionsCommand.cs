@@ -44,7 +44,7 @@ namespace HousewifeBot
             }
             else
             {
-                List<string> pages = GetPages(userShows.Select(s => $"- {s.Title} ({s.OriginalTitle})").ToList(), MaxPageSize);
+                List<string> pages = GetPages(userShows.Select(s => $"- {s.Title} ({s.OriginalTitle}) {s.SiteType.Title}").ToList(), MaxPageSize);
                 SendPages(pages);
                 Status = true;
             }

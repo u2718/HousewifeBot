@@ -37,13 +37,12 @@ namespace DAL
                                       s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
         }
 
-        [Obsolete]
-        public Show GetShowByTitle(string title)
+        public List<Show> GetShowsByTitle(string title)
         {
             title = title.ToLower();
-            return Shows.FirstOrDefault(s => s.Title.ToLower() == title ||
+            return Shows.Where(s => s.Title.ToLower() == title ||
                                              s.OriginalTitle.ToLower() == title ||
-                                             s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
+                                             s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title).ToList();
         }
 
         public Show GetShowById(int id)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using DAL;
 
 namespace HousewifeBot
@@ -29,13 +30,14 @@ namespace HousewifeBot
             bool subscribeById = ShowId != null;
             if (ShowId == null)
             {
-                ShowId = RequestShow(out showTitle);
-                if (ShowId == null)
+                bool showFound = RequestShow(out showTitle);
+                if (!showFound)
                 {
                     SendShowList(showTitle, GetMessageSize());
-                    Status = true;
-                    return;
                 }
+
+                Status = true;
+                return;
             }
 
             string response;
@@ -82,12 +84,12 @@ namespace HousewifeBot
                 if (subscriptionExists)
                 {
                     Program.Logger.Info($"{GetType().Name}: User {Message.From} is already subscribed to {show.OriginalTitle}");
-                    response = $"Вы уже подписаны на сериал '{show.Title}'";
+                    response = $"Вы уже подписаны на сериал \"{show.Title}\" ({show.SiteType.Title})";
                 }
                 else
                 {
                     Subscribe(db, user, show, newUser);
-                    response = $"Вы подписались на сериал '{show.Title}'";
+                    response = $"Вы подписались на сериал \"{show.Title}\" ({show.SiteType.Title})";
                 }
 
                 Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
@@ -140,7 +142,7 @@ namespace HousewifeBot
             return messageSize;
         }
 
-        private int? RequestShow(out string showTitle)
+        private bool RequestShow(out string showTitle)
         {
             if (string.IsNullOrEmpty(Arguments))
             {
@@ -169,14 +171,19 @@ namespace HousewifeBot
                 showTitle = Arguments;
             }
 
-            Show show;
             using (AppDbContext db = new AppDbContext())
             {
                 Program.Logger.Debug($"{GetType().Name}: Searching show {showTitle} in database");
-                show = db.GetShowByTitle(showTitle);
-            }
+                var shows = db.GetShowsByTitle(showTitle);
+                if (shows == null || shows.Count == 0)
+                {
+                    return false;
+                }
 
-            return show?.Id;
+                var subscriptionCommands = string.Join("; ", shows.Select(s => $"{s.SiteType.Title}: {string.Format(SubscribeCommandFormat, s.Id)}"));
+                TelegramApi.SendMessage(Message.From, subscriptionCommands);
+                return true;
+            }
         }
 
         private void SendShowList(string showTitle, int messageSize)
@@ -193,7 +200,7 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while retrieving fuzzy shows list", e);
                 }
 
-                List<string> showsList = shows.Select(show => $"{string.Format(SubscribeCommandFormat, show.Id)} {show.Title} ({show.OriginalTitle})").ToList();
+                List<string> showsList = shows.Select(show => $"{string.Format(SubscribeCommandFormat, show.Id)} {show.Title} ({show.OriginalTitle}) {show.SiteType.Title}").ToList();
                 List<string> pages = GetPages(showsList, messageSize);
                 SendPages(pages);
             }

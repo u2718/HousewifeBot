@@ -37,7 +37,7 @@ namespace HousewifeBot
             {
                 try
                 {
-                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ") " + s.SiteType.Title).ToList();
                 }
                 catch (Exception e)
                 {

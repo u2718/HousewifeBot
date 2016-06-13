@@ -51,7 +51,7 @@ namespace HousewifeBot
                 Logger.Debug("SendShowsNotifications: Sending new notifications");
                 foreach (var notification in showNotifications)
                 {
-                    string text = $"{notification.Show.Title} ({string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)})\n{notification.Show.Description}";
+                    string text = $"{notification.Show.Title} ({notification.Show.SiteType.Title}) {string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)}\n{notification.Show.Description}";
                     try
                     {
                         telegramApi.SendMessage(notification.User.TelegramUserId, text);
