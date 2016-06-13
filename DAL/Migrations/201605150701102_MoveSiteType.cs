@@ -10,6 +10,7 @@ namespace DAL.Migrations
             DropForeignKey("dbo.Episodes", "SiteType_Id", "dbo.SiteTypes");
             DropIndex("dbo.Episodes", new[] { "SiteType_Id" });
             AddColumn("dbo.Shows", "SiteTypeId", c => c.Int(nullable: false));
+            Sql("UPDATE dbo.Shows SET SiteTypeId = (SELECT Id FROM dbo.SiteTypes WHERE name = 'lostfilm')");
             CreateIndex("dbo.Shows", "SiteTypeId");
             AddForeignKey("dbo.Shows", "SiteTypeId", "dbo.SiteTypes", "Id", cascadeDelete: true);
             DropColumn("dbo.Episodes", "SiteType_Id");
