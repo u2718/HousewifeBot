@@ -1,34 +1,35 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Configuration;
+using System.Data.Entity;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DAL;
 using NLog;
 using Telegram;
-using System.Configuration;
-using System.Data.Entity;
-using DAL;
 using User = Telegram.User;
 
 namespace HousewifeBot
 {
-    class Program
+    internal class Program
     {
         public static readonly Logger Logger = LogManager.GetLogger("Common");
+        private static readonly Regex CommandRegex = new Regex(@"(/\w+)\s*");
 
-        private static string _token;
-        private static int _updateNotificationsInterval;
-        private static int _sendNotificationsInterval;
-        private static int _sendShowNotificationsInterval;
-        private static int _retryPollingDelay;
+        private static string token;
+        private static int updateNotificationsInterval;
+        private static int sendNotificationsInterval;
+        private static int sendShowNotificationsInterval;
+        private static int retryPollingDelay;
 
-        static bool LoadSettings()
+        private static bool LoadSettings()
         {
             bool result = true;
             try
             {
-                _token = ConfigurationManager.AppSettings["TelegramToken"];
+                token = ConfigurationManager.AppSettings["TelegramToken"];
             }
             catch (Exception e)
             {
@@ -38,7 +39,7 @@ namespace HousewifeBot
 
             try
             {
-                _updateNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["UpdateNotificationsInterval"]);
+                updateNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["UpdateNotificationsInterval"]);
             }
             catch (Exception e)
             {
@@ -48,7 +49,7 @@ namespace HousewifeBot
 
             try
             {
-                _sendNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendNotificationsInterval"]);
+                sendNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendNotificationsInterval"]);
             }
             catch (Exception e)
             {
@@ -58,7 +59,7 @@ namespace HousewifeBot
 
             try
             {
-                _sendShowNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendShowNotificationsInterval"]);
+                sendShowNotificationsInterval = int.Parse(ConfigurationManager.AppSettings["SendShowNotificationsInterval"]);
             }
             catch (Exception e)
             {
@@ -68,7 +69,7 @@ namespace HousewifeBot
 
             try
             {
-                _retryPollingDelay = int.Parse(ConfigurationManager.AppSettings["RetryPollingDelay"]);
+                retryPollingDelay = int.Parse(ConfigurationManager.AppSettings["RetryPollingDelay"]);
             }
             catch (Exception e)
             {
@@ -79,29 +80,30 @@ namespace HousewifeBot
             return result;
         }
 
-        private static void StartPolling(TelegramApi tgApi)
+        private static void StartPolling(TelegramApi api)
         {
             Logger.Debug("Starting polling");
-            Task pollingTask = tgApi.StartPolling();
+            Task pollingTask = api.StartPolling();
 
-            pollingTask.ContinueWith(e =>
-            {
-                Logger.Error(e.Exception, "An error occurred while retrieving updates");
-                Thread.Sleep(_retryPollingDelay);
-                StartPolling(tgApi);
-            },
-          TaskContinuationOptions.OnlyOnFaulted); 
+            pollingTask.ContinueWith(
+                e =>
+                {
+                    Logger.Error(e.Exception, "An error occurred while retrieving updates");
+                    Thread.Sleep(retryPollingDelay);
+                    StartPolling(api);
+                },
+                TaskContinuationOptions.OnlyOnFaulted);
         }
 
-        static void Main()
+        private static void Main()
         {
             Logger.Info($"HousewifeBot started: {Assembly.GetEntryAssembly().Location}");
             if (!LoadSettings())
             {
                 return;
-            }   
-            
-            TelegramApi tg = new TelegramApi(_token);
+            }
+
+            TelegramApi tg = new TelegramApi(token);
             try
             {
                 Logger.Debug("Executing GetMe");
@@ -117,44 +119,11 @@ namespace HousewifeBot
 
             Database.SetInitializer(new MigrateDatabaseToLatestVersion<AppDbContext, DAL.Migrations.Configuration>());
             Notifier notifier = new Notifier(tg);
-            var updateNotificationsTask = new Task(
-                () =>
-                {
-                    while (true)
-                    {
-                        notifier.UpdateNotifications();
-                        Thread.Sleep(_updateNotificationsInterval);
-                    }
-                }
-                );
-            updateNotificationsTask.Start();
-
-            var sendEpisodesNotificationsTask = new Task(
-                () =>
-                {
-                    while (true)
-                    {
-                        notifier.SendEpisodesNotifications();
-                        Thread.Sleep(_sendNotificationsInterval);
-                    }
-                }
-                );
-
-            var sendShowsNotificationsTask = new Task(
-                () =>
-                {
-                    while (true)
-                    {
-                        notifier.SendShowsNotifications();
-                        Thread.Sleep(_sendShowNotificationsInterval);
-                    }
-                });
-
-            sendEpisodesNotificationsTask.Start();
-            sendShowsNotificationsTask.Start();
+            StartUpdateNotificationsTask(notifier);
+            StartSendEpisodesNotificationsTask(notifier);
+            StartSendShowsNotificationsTask(notifier);
 
             var processingCommandUsers = new ConcurrentDictionary<User, bool>();
-            Regex commandRegex = new Regex(@"(/\w+)\s*");
 
             StartPolling(tg);
             while (true)
@@ -171,58 +140,118 @@ namespace HousewifeBot
                     {
                         continue;
                     }
+
                     Message message;
                     update.Value.TryDequeue(out message);
 
-                    Logger.Debug($"Received message '{message.Text}' from " +
-                                 $"{message.From}");
+                    Logger.Debug($"Received message '{message.Text}' from {message.From}");
 
-                    string commandTitle;
-                    try
+                    var command = GetCommand(tg, message);
+                    if (command == null)
                     {
-                        commandTitle = commandRegex.Match(message.Text).Groups[1].Value;
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "An error occurred while parsing command title");
                         continue;
                     }
 
-                    Logger.Debug($"Creating command object for '{message.Text}'");
-                    var command = Command.CreateCommand(commandTitle);
-                    Logger.Info($"Received {command.GetType().Name} from " +
-                                $"{message.From}");
-
-                    command.TelegramApi = tg;
-                    command.Message = message;
-
                     Logger.Debug($"Executing {command.GetType().Name}");
                     processingCommandUsers[update.Key] = true;
-                    Task commandTask = Task.Run(() =>
-                    {
-                        try
-                        {
-                            command.Execute();
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Error($"An error occurred while executing {command.GetType().Name}.\n" +
-                                         $"Message: {command.Message.Text}\n" +
-                                         $"Arguments: {command.Arguments}\n" +
-                                         $"User: {command.Message.From}");
-                            Logger.Error(e);
-                        }
-                    }
-                        );
+                    var commandTask = StartCommandTask(command);
                     commandTask.ContinueWith(task =>
                     {
                         processingCommandUsers[update.Key] = false;
-                        Logger.Debug($"{command.GetType().Name} from " +
-                                     $"{message.From} {(command.Status ? "succeeded" : "failed")}");
+                        Logger.Debug($"{command.GetType().Name} from {message.From} {(command.Status ? "succeeded" : "failed")}");
                     });
                 }
+
                 Thread.Sleep(200);
             }
+        }
+
+        private static Task StartCommandTask(Command command)
+        {
+            Task commandTask = Task.Run(() =>
+            {
+                try
+                {
+                    command.Execute();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"An error occurred while executing {command.GetType().Name}.\n" +
+                                 $"Message: {command.Message.Text}\n" +
+                                 $"Arguments: {command.Arguments}\n" +
+                                 $"User: {command.Message.From}");
+                    Logger.Error(e);
+                }
+            });
+
+            return commandTask;
+        }
+
+        private static Command GetCommand(TelegramApi tg, Message message)
+        {
+            string commandTitle;
+            try
+            {
+                commandTitle = CommandRegex.Match(message.Text).Groups[1].Value;
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "An error occurred while parsing command title");
+                return null;
+            }
+
+            Logger.Debug($"Creating command object for '{message.Text}'");
+            var command = Command.CreateCommand(commandTitle);
+            Logger.Info($"Received {command.GetType().Name} from " +
+                        $"{message.From}");
+
+            command.TelegramApi = tg;
+            command.Message = message;
+            return command;
+        }
+
+        private static void StartSendShowsNotificationsTask(Notifier notifier)
+        {
+            var sendShowsNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.SendShowsNotifications();
+                        Thread.Sleep(sendShowNotificationsInterval);
+                    }
+                });
+            sendShowsNotificationsTask.Start();
+        }
+
+        private static void StartSendEpisodesNotificationsTask(Notifier notifier)
+        {
+            var sendEpisodesNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.SendEpisodesNotifications();
+                        Thread.Sleep(sendNotificationsInterval);
+                    }
+                });
+
+            sendEpisodesNotificationsTask.Start();
+        }
+
+        private static void StartUpdateNotificationsTask(Notifier notifier)
+        {
+            var updateNotificationsTask = new Task(
+                () =>
+                {
+                    while (true)
+                    {
+                        notifier.UpdateNotifications();
+                        Thread.Sleep(updateNotificationsInterval);
+                    }
+                });
+
+            updateNotificationsTask.Start();
         }
     }
 }

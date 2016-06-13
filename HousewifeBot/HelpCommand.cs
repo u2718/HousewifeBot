@@ -2,20 +2,21 @@
 
 namespace HousewifeBot
 {
-    class HelpCommand : Command
+    public class HelpCommand : Command
     {
         public override void Execute()
         {
             Program.Logger.Debug($"{GetType().Name}: Sending help message to {Message.From}");
             try
             {
-                TelegramApi.SendMessage(Message.From, "Список команд: \n" +
-                "/shows - вывести список всех сериалов \n" +
-                "/subscribe - подписаться на сериал \n" +
-                "/unsubscribe - отписаться от сериала \n" +
-                "/unsubscribe_all - отписаться от всех сериалов \n" +
-                "/help - справка"
-                );
+                TelegramApi.SendMessage(
+                    Message.From, 
+                    "Список команд: \n" +
+                    "/shows - вывести список всех сериалов \n" +
+                    "/subscribe - подписаться на сериал \n" +
+                    "/unsubscribe - отписаться от сериала \n" +
+                    "/unsubscribe_all - отписаться от всех сериалов \n" +
+                    "/help - справка");
             }
             catch (Exception e)
             {

@@ -10,30 +10,11 @@ namespace HousewifeBot
     {
         private static readonly Regex ArgumentsRegex = new Regex(@"/\w+\s*(.+)?");
 
-        private string _arguments;
+        private string arguments;
 
-        public string Arguments
+        protected Command()
         {
-            get
-            {
-                if (!string.IsNullOrEmpty(_arguments)) return _arguments;
-
-                try
-                {
-                    _arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Error while parsing command string", e);
-                }
-                return _arguments;
-            }
         }
-
-        public TelegramApi TelegramApi { get; set; }
-        public Message Message { get; set; }
-
-        public bool Status { get; protected set; } = false;
 
         protected Command(TelegramApi telegramApi, Message message)
         {
@@ -41,10 +22,33 @@ namespace HousewifeBot
             Message = message;
         }
 
-        protected Command()
-        { }
+        public string Arguments
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(arguments))
+                {
+                    return arguments;
+                }
 
-        abstract public void Execute();
+                try
+                {
+                    arguments = ArgumentsRegex.Match(Message.Text).Groups[1].Value;
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Error while parsing command string", e);
+                }
+
+                return arguments;
+            }
+        }
+
+        public TelegramApi TelegramApi { get; set; }
+
+        public Message Message { get; set; }
+
+        public bool Status { get; protected set; } = false;
 
         public static Command CreateCommand(string command)
         {
@@ -54,12 +58,14 @@ namespace HousewifeBot
                 Match downloadMatch = downloadCommandRegex.Match(command);
                 return new DownloadCommand(int.Parse(downloadMatch.Groups[1].Value), downloadMatch.Groups[2].Value);
             }
+
             Regex subscribeCommandRegex = new Regex(string.Format(SubscribeCommand.SubscribeCommandFormat, @"(\d+)"));
             if (subscribeCommandRegex.IsMatch(command))
             {
                 Match subscribeMatch = subscribeCommandRegex.Match(command);
                 return new SubscribeCommand(int.Parse(subscribeMatch.Groups[1].Value));
             }
+
             Regex unsubscribeCommandRegex = new Regex(string.Format(UnsubscribeCommand.UnsubscribeCommandFormat, @"(\d+)"));
             if (unsubscribeCommandRegex.IsMatch(command))
             {
@@ -90,9 +96,9 @@ namespace HousewifeBot
                 default:
                     return new UnknownCommand();
             }
-
-
         }
+
+        public abstract void Execute();
 
         protected static List<string> GetPages(List<string> rows, int messageSize)
         {
@@ -108,9 +114,9 @@ namespace HousewifeBot
                 pagesList.Add(
                     rows
                     .GetRange(i, count)
-                    .Aggregate(string.Empty, (s, s1) => s + "\n" + s1)
-                    );
+                    .Aggregate(string.Empty, (s, s1) => s + "\n" + s1));
             }
+
             return pagesList;
         }
 
@@ -123,17 +129,17 @@ namespace HousewifeBot
                 for (int i = 0; i < pagesList.Count; i++)
                 {
                     string page = pagesList[i];
-
                     if (i != pagesList.Count - 1)
                     {
                         page += "\n/next or /stop";
                     }
-                    TelegramApi.SendMessage(Message.From, page);
 
+                    TelegramApi.SendMessage(Message.From, page);
                     if (i == pagesList.Count - 1)
                     {
                         break;
                     }
+
                     Message message;
                     do
                     {
@@ -142,7 +148,8 @@ namespace HousewifeBot
                         {
                             TelegramApi.SendMessage(Message.From, "\n/next or /stop");
                         }
-                    } while (message?.Text != "/stop" && message?.Text != "/next");
+                    }
+                    while (message?.Text != "/stop" && message?.Text != "/next");
 
                     if (message.Text == "/stop")
                     {

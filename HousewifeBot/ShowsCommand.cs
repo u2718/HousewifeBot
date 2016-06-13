@@ -6,7 +6,7 @@ using Telegram;
 
 namespace HousewifeBot
 {
-    class ShowsCommand : Command
+    public class ShowsCommand : Command
     {
         private const int MaxPageSize = 50;
 
@@ -27,17 +27,17 @@ namespace HousewifeBot
             {
                 messageSize = MaxPageSize;
             }
+
             messageSize = Math.Min(messageSize, MaxPageSize);
             Program.Logger.Debug($"{GetType().Name}: Message size: {messageSize}");
 
             List<string> shows;
-
             Program.Logger.Debug($"{GetType().Name}: Retrieving shows list");
             using (var db = new AppDbContext())
             {
                 try
                 {
-                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ")").ToList();
+                    shows = db.Shows.Select(s => s.Title + " (" + s.OriginalTitle + ") " + s.SiteType.Title).ToList();
                 }
                 catch (Exception e)
                 {

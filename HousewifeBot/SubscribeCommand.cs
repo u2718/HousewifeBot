@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using DAL;
 
 namespace HousewifeBot
@@ -10,16 +11,17 @@ namespace HousewifeBot
         public const string SubscribeCommandFormat = "/s_{0}";
         private const int MaxPageSize = 50;
 
-        public int? ShowId { get; set; }
-
         public SubscribeCommand()
         {
 
         }
+
         public SubscribeCommand(int showId)
         {
             ShowId = showId;
         }
+
+        public int? ShowId { get; set; }
 
         public override void Execute()
         {
@@ -28,21 +30,14 @@ namespace HousewifeBot
             bool subscribeById = ShowId != null;
             if (ShowId == null)
             {
-                int messageSize;
-                int.TryParse(Arguments, out messageSize);
-                if (messageSize == 0)
+                bool showFound = RequestShow(out showTitle);
+                if (!showFound)
                 {
-                    messageSize = MaxPageSize;
+                    SendShowList(showTitle, GetMessageSize());
                 }
-                messageSize = Math.Min(messageSize, MaxPageSize);
 
-                ShowId = RequestShow(out showTitle);
-                if (ShowId == null)
-                {
-                    SendShowList(showTitle, messageSize);
-                    Status = true;
-                    return;
-                }
+                Status = true;
+                return;
             }
 
             string response;
@@ -63,20 +58,13 @@ namespace HousewifeBot
                     {
                         throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
                     }
+
                     Status = true;
                     return;
                 }
 
                 Program.Logger.Debug($"{GetType().Name}: Searching user with TelegramId: {Message.From.Id} in database");
-                User user;
-                try
-                {
-                    user = db.GetUserByTelegramId(Message.From.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching user in database", e);
-                }
+                var user = db.GetUserByTelegramId(Message.From.Id);
                 bool newUser = false;
                 if (user == null)
                 {
@@ -87,63 +75,25 @@ namespace HousewifeBot
                         LastName = Message.From.LastName,
                         Username = Message.From.Username
                     };
+
                     newUser = true;
                 }
 
-                if (newUser)
-                {
-                    Program.Logger.Info($"{GetType().Name}: {user} is new User");
-                }
-                else
-                {
-                    Program.Logger.Debug($"{GetType().Name}: User {user} is already exist");
-                }
-
-                bool subscriptionExists;
                 Program.Logger.Debug($"{GetType().Name}: Checking for subscription existence");
-                try
-                {
-                    subscriptionExists = user.Subscriptions.Any(s => s.Show.Id == show.Id);
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while checking for subscription existence", e);
-                }
+                var subscriptionExists = user.Subscriptions.Any(s => s.Show.Id == show.Id);
                 if (subscriptionExists)
                 {
                     Program.Logger.Info($"{GetType().Name}: User {Message.From} is already subscribed to {show.OriginalTitle}");
-                    response = $"Вы уже подписаны на сериал '{show.Title}'";
+                    response = $"Вы уже подписаны на сериал \"{show.Title}\" ({show.SiteType.Title})";
                 }
                 else
                 {
-                    Subscription subscription = new Subscription
-                    {
-                        User = user,
-                        Show = show,
-                        SubscriptionDate = DateTimeOffset.Now
-                    };
-
-                    if (newUser)
-                    {
-                        user.Subscriptions.Add(subscription);
-                        db.Users.Add(user);
-                    }
-                    else
-                    {
-                        db.Subscriptions.Add(subscription);
-                    }
-                    response = $"Вы подписались на сериал '{show.Title}'";
+                    Subscribe(db, user, show, newUser);
+                    response = $"Вы подписались на сериал \"{show.Title}\" ({show.SiteType.Title})";
                 }
 
                 Program.Logger.Debug($"{GetType().Name}: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while saving changes to database", e);
-                }
+                db.SaveChanges();
             }
 
             Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
@@ -159,7 +109,40 @@ namespace HousewifeBot
             Status = true;
         }
 
-        private int? RequestShow(out string showTitle)
+        private static void Subscribe(AppDbContext db, User user, Show show, bool newUser)
+        {
+            Subscription subscription = new Subscription
+            {
+                User = user,
+                Show = show,
+                SubscriptionDate = DateTimeOffset.Now
+            };
+
+            if (newUser)
+            {
+                user.Subscriptions.Add(subscription);
+                db.Users.Add(user);
+            }
+            else
+            {
+                db.Subscriptions.Add(subscription);
+            }
+        }
+
+        private int GetMessageSize()
+        {
+            int messageSize;
+            int.TryParse(Arguments, out messageSize);
+            if (messageSize == 0)
+            {
+                messageSize = MaxPageSize;
+            }
+
+            messageSize = Math.Min(messageSize, MaxPageSize);
+            return messageSize;
+        }
+
+        private bool RequestShow(out string showTitle)
         {
             if (string.IsNullOrEmpty(Arguments))
             {
@@ -188,20 +171,19 @@ namespace HousewifeBot
                 showTitle = Arguments;
             }
 
-            Show show;
             using (AppDbContext db = new AppDbContext())
             {
                 Program.Logger.Debug($"{GetType().Name}: Searching show {showTitle} in database");
-                try
+                var shows = db.GetShowsByTitle(showTitle);
+                if (shows == null || shows.Count == 0)
                 {
-                    show = db.GetShowByTitle(showTitle);
+                    return false;
                 }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while searching show {showTitle} in database", e);
-                }
+
+                var subscriptionCommands = string.Join("; ", shows.Select(s => $"{s.SiteType.Title}: {string.Format(SubscribeCommandFormat, s.Id)}"));
+                TelegramApi.SendMessage(Message.From, subscriptionCommands);
+                return true;
             }
-            return show?.Id;
         }
 
         private void SendShowList(string showTitle, int messageSize)
@@ -218,7 +200,7 @@ namespace HousewifeBot
                     throw new Exception($"{GetType().Name}: An error occurred while retrieving fuzzy shows list", e);
                 }
 
-                List<string> showsList = shows.Select(show => $"{string.Format(SubscribeCommandFormat, show.Id)} {show.Title} ({show.OriginalTitle})").ToList();
+                List<string> showsList = shows.Select(show => $"{string.Format(SubscribeCommandFormat, show.Id)} {show.Title} ({show.OriginalTitle}) {show.SiteType.Title}").ToList();
                 List<string> pages = GetPages(showsList, messageSize);
                 SendPages(pages);
             }

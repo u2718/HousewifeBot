@@ -190,3 +190,8 @@ _Pvt_Extensions/
 ModelManifest.xml
 HousewifeBot/Local.config
 logs/
+DAL/Settings.StyleCop
+HousewifeBot/Settings.StyleCop
+Scraper/Settings.StyleCop
+Telegram/Settings.StyleCop
+TorrentDownloader/Settings.StyleCop

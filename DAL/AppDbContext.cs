@@ -16,6 +16,7 @@ namespace DAL
         public DbSet<Settings> Settings { get; set; }
         public DbSet<DownloadTask> DownloadTasks { get; set; }
         public DbSet<ShowNotification> ShowNotifications { get; set; }
+        public DbSet<SiteType> SiteTypes { get; set; }
 
         public AppDbContext() : base("DbConnection")
         {
@@ -27,14 +28,22 @@ namespace DAL
             return Users.FirstOrDefault(e => e.TelegramUserId == telegramId);
         }
 
-        public Show GetShowByTitle(string title)
+        public Show GetShowByTitle(SiteType site, string title)
         {
             title = title.ToLower();
-            return Shows.FirstOrDefault(s => s.Title.ToLower() == title ||
-                                             s.OriginalTitle.ToLower() == title ||
-                                             s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
+            return SiteTypes.First(st => st.Id == site.Id)
+                .Shows.FirstOrDefault(s => s.Title.ToLower() == title ||
+                                      s.OriginalTitle.ToLower() == title ||
+                                      s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
         }
 
+        public List<Show> GetShowsByTitle(string title)
+        {
+            title = title.ToLower();
+            return Shows.Where(s => s.Title.ToLower() == title ||
+                                             s.OriginalTitle.ToLower() == title ||
+                                             s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title).ToList();
+        }
 
         public Show GetShowById(int id)
         {
@@ -94,6 +103,11 @@ namespace DAL
         public Notification GetNotificationById(int notificationId)
         {
             return Notifications.FirstOrDefault(n => n.Id == notificationId);
+        }
+
+        public SiteType GetSiteTypeByName(string siteTypeName)
+        {
+            return SiteTypes.FirstOrDefault(st => st.Name == siteTypeName);
         }
     }
 }

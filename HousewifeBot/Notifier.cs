@@ -12,11 +12,11 @@ namespace HousewifeBot
     {
         private static readonly Logger Logger = LogManager.GetLogger("Notifier");
 
-        public TelegramApi TelegramApi { get; set; }
+        private TelegramApi telegramApi;
 
         public Notifier(TelegramApi telegramApi)
         {
-            TelegramApi = telegramApi;
+            this.telegramApi = telegramApi;
         }
 
         public void UpdateNotifications()
@@ -36,75 +36,132 @@ namespace HousewifeBot
             }
         }
 
+        public void SendShowsNotifications()
+        {
+            using (AppDbContext db = new AppDbContext())
+            {
+                var showNotifications = db.ShowNotifications
+                    .Where(n => !n.Notified)
+                    .ToList();
+                if (showNotifications.Count == 0)
+                {
+                    return;
+                }
+
+                Logger.Debug("SendShowsNotifications: Sending new notifications");
+                foreach (var notification in showNotifications)
+                {
+                    string text = $"{notification.Show.Title} ({notification.Show.SiteType.Title}) {string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)}\n{notification.Show.Description}";
+                    try
+                    {
+                        telegramApi.SendMessage(notification.User.TelegramUserId, text);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, "SendShowsNotifications: An error occurred while sending new notifications");
+                    }
+
+                    notification.Notified = true;
+                }
+
+                Logger.Trace("SendShowsNotifications: Saving changes to database");
+                db.SaveChanges();
+            }
+        }
+
+        public void SendEpisodesNotifications()
+        {
+            using (AppDbContext db = new AppDbContext())
+            {
+                var notifications = db.Notifications
+                    .Where(n => !n.Notified)
+                    .ToList();
+                if (notifications.Count == 0)
+                {
+                    return;
+                }
+
+                var notificationDictionary =
+                    notifications.Aggregate(
+                        new Dictionary<User, List<Notification>>(),
+                        (d, notification) =>
+                        {
+                            if (d.ContainsKey(notification.Subscription.User))
+                            {
+                                d[notification.Subscription.User].Add(notification);
+                            }
+                            else
+                            {
+                                d.Add(notification.Subscription.User, new List<Notification>() { notification });
+                            }
+
+                            return d;
+                        });
+
+                Logger.Debug("SendEpisodesNotifications: Sending new notifications");
+                foreach (var userNotifications in notificationDictionary)
+                {
+                    string text = string.Empty;
+                    foreach (Notification notification in userNotifications.Value)
+                    {
+                        text += notification.Subscription.Show.Title + " - " + notification.Episode.Title;
+                        var settings = db.GetSettingsByUser(userNotifications.Key);
+                        if (settings != null)
+                        {
+                            text = GetTorrents(notification, settings);
+                        }
+                    }
+
+                    try
+                    {
+                        telegramApi.SendMessage(userNotifications.Key.TelegramUserId, text);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, "SendEpisodesNotifications: An error occurred while sending new notifications");
+                    }
+                }
+
+                Logger.Info($"SendEpisodesNotifications: {notificationDictionary.Count} new " +
+                            $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
+                notifications.ForEach(notification => { db.Notifications.First(n => n.Id == notification.Id).Notified = true; });
+                Logger.Trace("SendEpisodesNotifications: Saving changes to database");
+                db.SaveChanges();
+            }
+        }
+
         private static int CreateShowNotifications()
         {
             int newNotificationsCount = 0;
             using (AppDbContext db = new AppDbContext())
             {
-                Logger.Trace("UpdateNotifications: Retrieving users");
-
-                List<User> users;
-                try
-                {
-                    users = db.Users.ToList();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while retrieving users");
-                    return 0;
-                }
-
                 Logger.Trace("UpdateNotifications: Retrieving new shows for users");
-                foreach (var user in users)
+                foreach (var user in db.Users)
                 {
-                    List<Show> shows;
-                    try
-                    {
-                        shows = db.Shows
-                            .Where(s => s.DateCreated > user.DateCreated &&
-                                        !db.ShowNotifications.Any(n => n.User.Id == user.Id && n.Show.Id == s.Id))
-                            .ToList();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, $"UpdateNotifications: An error occurred while retrieving new shows for user: {user}");
-                        continue;
-                    }
-
+                    var shows = db.Shows
+                        .Where(s => s.DateCreated > user.DateCreated &&
+                                    !db.ShowNotifications.Any(n => n.User.Id == user.Id && n.Show.Id == s.Id))
+                        .ToList();
                     if (shows.Count == 0)
                     {
                         continue;
                     }
 
-                    List<ShowNotification> newNotifications;
-                    try
-                    {
-                        newNotifications = shows.Aggregate(
-                            new List<ShowNotification>(), (list, show) =>
-                            {
-                                list.Add(new ShowNotification() { Show = show, User = user });
-                                return list;
-                            });
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, $"UpdateNotifications: An error occurred while creating new notifications for user: {user}");
-                        continue;
-                    }
-
+                    var newNotifications = shows.Aggregate(
+                        new List<ShowNotification>(), 
+                        (list, show) =>
+                        {
+                            list.Add(new ShowNotification() { Show = show, User = user });
+                            return list;
+                        });
                     db.ShowNotifications.AddRange(newNotifications);
                     newNotificationsCount += newNotifications.Count;
                 }
+
                 Logger.Trace("UpdateNotifications: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while saving changes to database");
-                }
+                db.SaveChanges();
             }
+
             return newNotificationsCount;
         }
 
@@ -113,55 +170,19 @@ namespace HousewifeBot
             int newNotificationsCount = 0;
             using (AppDbContext db = new AppDbContext())
             {
-                Logger.Trace("UpdateNotifications: Retrieving subscriptions");
-                List<Subscription> subscriptions;
-                try
-                {
-                    subscriptions = db.Subscriptions.ToList();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while retrieving subscriptions");
-                    return 0;
-                }
-
                 Logger.Trace("UpdateNotifications: Retrieving new episodes for subscriptions");
-                foreach (Subscription subscription in subscriptions)
+                foreach (Subscription subscription in db.Subscriptions)
                 {
                     if (subscription.User == null || subscription.Show == null)
                     {
                         continue;
                     }
 
-                    IQueryable<Notification> notifications;
-                    try
-                    {
-                        notifications = db.Notifications
-                            .Where(n => n.Subscription.Id == subscription.Id);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e,
-                            "UpdateNotifications: An error occurred while retrieving notifications for subscription: " +
-                            $" {subscription.User} -" +
-                            $" {subscription.Show.OriginalTitle}");
-                        continue;
-                    }
-
-                    List<Episode> episodes;
-                    try
-                    {
-                        episodes = db.Episodes
-                            .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate &&
-                                        !notifications.Any(n => n.Episode.Id == s.Id))
-                            .Select(s => s).ToList();
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "UpdateNotifications: An error occurred while retrieving episodes");
-                        continue;
-                    }
-
+                    var notifications = db.Notifications.Where(n => n.Subscription.Id == subscription.Id);
+                    var episodes = db.Episodes
+                        .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate &&
+                                    !notifications.Any(n => n.Episode.Id == s.Id))
+                        .Select(s => s).ToList();
                     if (episodes.Count == 0)
                     {
                         continue;
@@ -181,198 +202,42 @@ namespace HousewifeBot
                                 Subscription = subscription
                             });
                             return list;
-                        }
-                        );
+                        });
 
-                    try
-                    {
-                        db.Notifications.AddRange(newNotifications);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "UpdateNotifications: An error occurred while creating notifications");
-                    }
-
+                    db.Notifications.AddRange(newNotifications);
                     newNotificationsCount += newNotifications.Count;
                 }
 
                 Logger.Trace("UpdateNotifications: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "UpdateNotifications: An error occurred while saving changes to database");
-                }
+                db.SaveChanges();
             }
+
             return newNotificationsCount;
         }
-        public void SendShowsNotifications()
+
+        private static string GetTorrents(Notification notification, Settings settings)
         {
-            using (AppDbContext db = new AppDbContext())
+            string text = string.Empty;
+            var torrentGetter = new LostFilmTorrentGetter();
+            try
             {
-                Logger.Trace("SendShowsNotifications: Retrieving new notifications");
-                List<ShowNotification> showNotifications;
-                try
+                List<TorrentDescription> torrents = torrentGetter.GetEpisodeTorrents(notification.Episode, settings.SiteLogin, settings.SitePassword);
+                if (torrents.Count != 0)
                 {
-                    showNotifications = db.ShowNotifications
-                        .Where(n => !n.Notified)
-                        .ToList();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "SendShowsNotifications: An error occurred while retrieving new notifications");
-                    return;
-                }
-
-                if (showNotifications.Count == 0)
-                {
-                    return;
-                }
-
-             
-                Logger.Debug("SendShowsNotifications: Sending new notifications");
-                foreach (var notification in showNotifications)
-                {
-                    string text = $"{notification.Show.Title} ({string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)})\n{notification.Show.Description}";
-                    try
-                    {
-                        TelegramApi.SendMessage(notification.User.TelegramUserId, text);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "SendShowsNotifications: An error occurred while sending new notifications");
-                    }
-
-                    notification.Notified = true;
-                }
-
-                //Logger.Info($"SendShowsNotifications: {notificationDictionary.Count} new " +
-                //           $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
-
-                Logger.Trace("SendShowsNotifications: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "SendShowsNotifications: An error occurred while saving changes to database");
-                }
-            } 
-        }
-        public void SendEpisodesNotifications()
-        {
-            using (AppDbContext db = new AppDbContext())
-            {
-                Logger.Trace("SendEpisodesNotifications: Retrieving new notifications");
-                List<Notification> notifications;
-                try
-                {
-                    notifications = db.Notifications
-                        .Where(n => !n.Notified)
-                        .ToList();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "SendEpisodesNotifications: An error occurred while retrieving new notifications");
-                    return;
-                }
-
-                if (notifications.Count == 0)
-                {
-                    return;
-                }
-
-                Dictionary<User, List<Notification>> notificationDictionary =
-                    notifications.Aggregate(
-                        new Dictionary<User, List<Notification>>(),
-                        (d, notification) =>
-                        {
-                            if (d.ContainsKey(notification.Subscription.User))
-                            {
-                                d[notification.Subscription.User].Add(notification);
-                            }
-                            else
-                            {
-                                d.Add(notification.Subscription.User, new List<Notification>() {notification});
-                            }
-                            return d;
-                        }
-                        );
-
-                Logger.Debug("SendEpisodesNotifications: Sending new notifications");
-                foreach (var userNotifications in notificationDictionary)
-                {
-                    string text = string.Empty;
-                    foreach (Notification notification in userNotifications.Value)
-                    {
-                        text += notification.Subscription.Show.Title + " - " + notification.Episode.Title;
-                        Settings settings = db.GetSettingsByUser(userNotifications.Key);
-                        if (settings != null)
-                        {
-                            ITorrentGetter torrentGetter = new LostFilmTorrentGetter();
-
-                            try
-                            {
-                                List<TorrentDescription> torrents = torrentGetter.GetEpisodeTorrents(notification.Episode, settings.SiteLogin, settings.SitePassword);
-                                if (torrents.Count != 0)
-                                {
-                                    text += " (" +
-                                            torrents.Select(t => t.Quality)
-                                                .Aggregate(string.Empty,
-                                                    (s, s1) =>
-                                                        s + " " +
-                                                        string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
-                                            + ")";
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.Error(e, $"SendEpisodesNotifications: An error occured while retrieving torrents for {notification.Episode.Show.Title} - {notification.Episode.Title}");
-                                text += "(Не удалось получить список торрентов. Возможно указан неверный логин/пароль)";
-                            }
-                          
-                            text += "\n";
-                        }
-                    }
-
-                    try
-                    {
-                        TelegramApi.SendMessage(userNotifications.Key.TelegramUserId, text);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, "SendEpisodesNotifications: An error occurred while sending new notifications");
-                    }
-                }
-
-                Logger.Info($"SendEpisodesNotifications: {notificationDictionary.Count} new " +
-                            $"{((notificationDictionary.Count == 1) ? "notification was sent" : "notifications were sent")}");
-
-                Logger.Debug("SendEpisodesNotifications: Marking new notifications as notified");
-                try
-                {
-                    notifications.ForEach(
-                        notification => { db.Notifications.First(n => n.Id == notification.Id).Notified = true; }
-                        );
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "SendEpisodesNotifications: An error occurred while marking new notifications as notified");
-                }
-
-                Logger.Trace("SendEpisodesNotifications: Saving changes to database");
-                try
-                {
-                    db.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, "SendEpisodesNotifications: An error occurred while saving changes to database");
+                    text += " (" +
+                            torrents.Select(t => t.Quality)
+                                .Aggregate(string.Empty, (s, s1) => s + " " + string.Format(DownloadCommand.DownloadCommandFormat, notification.Id, s1))
+                            + ")";
                 }
             }
+            catch (Exception e)
+            {
+                Logger.Error(e, "SendEpisodesNotifications: An error occured while retrieving torrents for {notification.Episode.Show.Title} - {notification.Episode.Title}");
+                text += " (Не удалось получить список торрентов. Возможно указан неверный логин/пароль)";
+            }
+
+            text += "\n";
+            return text;
         }
     }
 }

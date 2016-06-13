@@ -14,7 +14,7 @@ namespace TorrentDownloader
         static void Main(string[] args)
         {
             Logger.Info($"TorrentDownloader started: {Assembly.GetEntryAssembly().Location}");
-            ITorrentDownloader downloader = new UTorrentDownloader();
+            ITorrentDownloader downloader = new QBittorrentDownloader();
             int updateInterval;
             try
             {
@@ -51,7 +51,6 @@ namespace TorrentDownloader
                             Logger.Error(e, $"An error occurred while loading settings of {downloadTask.User}");
                             continue;
                         }
-                        //var setting = settings.FirstOrDefault(s => s.User.Id == downloadTask.User.Id);
                         if (setting == null)
                         {
                             Logger.Debug($"Settings of {downloadTask.User} was not found");
@@ -69,8 +68,6 @@ namespace TorrentDownloader
                             Logger.Error(e, "An error occurred while downloading torrent");
                             downloadStarted = false;
                         }
-
-                        
 
                         downloadTask.DownloadStarted = downloadStarted;
                         db.SaveChanges();
