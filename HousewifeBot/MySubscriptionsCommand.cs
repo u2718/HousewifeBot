@@ -26,27 +26,27 @@ namespace HousewifeBot
                     Program.Logger.Debug($"{GetType().Name}: Retrieving user's subscriptions");
                     userShows = user.Subscriptions.Select(s => s.Show).ToList();
                 }
-            }
 
-            if (userShows == null || userShows.Count == 0)
-            {
-                Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
-                try
+                if (userShows == null || userShows.Count == 0)
                 {
-                    TelegramApi.SendMessage(Message.From, "Вы не подписаны ни на один сериал");
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
-                }
+                    Program.Logger.Debug($"{GetType().Name}: Sending response to {Message.From}");
+                    try
+                    {
+                        TelegramApi.SendMessage(Message.From, "Вы не подписаны ни на один сериал");
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception($"{GetType().Name}: An error occurred while sending response to {Message.From}", e);
+                    }
 
-                Status = true;
-            }
-            else
-            {
-                List<string> pages = GetPages(userShows.Select(s => $"- {s.Title} ({s.OriginalTitle}) {s.SiteType.Title}").ToList(), MaxPageSize);
-                SendPages(pages);
-                Status = true;
+                    Status = true;
+                }
+                else
+                {
+                    List<string> pages = GetPages(userShows.Select(s => $"- {s.Title} ({s.OriginalTitle}) {s.SiteType.Title}").ToList(), MaxPageSize);
+                    SendPages(pages);
+                    Status = true;
+                }
             }
         }
     }
