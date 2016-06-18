@@ -34,11 +34,9 @@ namespace Scraper
             var tasks = new List<Task>(scrapers.Count);
             foreach (var scraper in scrapers)
             {
-                var updateShowsTask = new Task(() => UpdateShows(scraper));
-                var updateEpisodesTask = new Task(() => UpdateEpisodes(scraper));
-                tasks.Add(updateShowsTask);
-                tasks.Add(updateEpisodesTask);
-                updateShowsTask.Start();
+                var loadShowsTask = new Task(() => LoadShows(scraper));
+                tasks.Add(loadShowsTask);
+                loadShowsTask.Start();
             }
 
             Task.WaitAll(tasks.ToArray());
@@ -60,10 +58,11 @@ namespace Scraper
             return result;
         }
 
-        private static void UpdateEpisodes(Scraper scraper)
+        private static void LoadShows(Scraper scraper)
         {
             while (true)
             {
+                UpdateShows(scraper);
                 List<Show> shows;
                 Logger.Trace($"Retrieving new episodes from {scraper.SiteTitle}");
                 try
@@ -87,10 +86,13 @@ namespace Scraper
             {
                 foreach (var show in shows)
                 {
-                    var dbShow = db.GetShowByTitle(show.SiteType, show.Title);
+                    var dbShow = db.GetShowByTitle(show.SiteTypeId, show.Title);
                     if (dbShow != null)
                     {
-                        dbShow.Episodes.AddRange(show.Episodes);
+                        foreach (var episode in show.Episodes)
+                        {
+                            dbShow.Episodes.Add(episode);
+                        }
                     }
                     else
                     {
@@ -106,41 +108,36 @@ namespace Scraper
 
         private static void UpdateShows(Scraper scraper)
         {
-            while (true)
+            using (var db = new AppDbContext())
             {
-                using (var db = new AppDbContext())
+                List<Show> showsList;
+                Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
+                try
                 {
-                    List<Show> showsList;
-                    Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
-                    try
-                    {
-                        showsList = scraper.LoadShows().Result;
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Error(e, $"An error occurred while retrieving shows from {scraper.SiteTitle}");
-                        return;
-                    }
-
-                    foreach (var show in showsList)
-                    {
-                        var dbShow = db.SiteTypes.First(st => st.Id == scraper.ShowsSiteType.Id).Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
-                        if (dbShow != null)
-                        {
-                            dbShow.OriginalTitle = show.OriginalTitle;
-                            dbShow.Description = show.Description ?? dbShow.Description;
-                            dbShow.SiteId = show.SiteId;
-                        }
-                        else
-                        {
-                            db.Shows.Add(show);
-                        }
-                    }
-
-                    db.SaveChanges();
+                    showsList = scraper.LoadShows().Result;
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e, $"An error occurred while retrieving shows from {scraper.SiteTitle}");
+                    return;
                 }
 
-                Thread.Sleep(TimeSpan.FromMinutes(updateInterval));
+                foreach (var show in showsList)
+                {
+                    var dbShow = db.SiteTypes.First(st => st.Id == scraper.ShowsSiteType.Id).Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
+                    if (dbShow != null)
+                    {
+                        dbShow.OriginalTitle = show.OriginalTitle;
+                        dbShow.Description = show.Description ?? dbShow.Description;
+                        dbShow.SiteId = show.SiteId;
+                    }
+                    else
+                    {
+                        db.Shows.Add(show);
+                    }
+                }
+
+                db.SaveChanges();
             }
         }
 

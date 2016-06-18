@@ -23,6 +23,9 @@ namespace HousewifeBot
         private static int sendNotificationsInterval;
         private static int sendShowNotificationsInterval;
         private static int retryPollingDelay;
+        private static Task updateNotificationsTask;
+        private static Task sendEpisodesNotificationsTask;
+        private static Task sendShowsNotificationsTask;
 
         private static bool LoadSettings()
         {
@@ -212,7 +215,7 @@ namespace HousewifeBot
 
         private static void StartSendShowsNotificationsTask(Notifier notifier)
         {
-            var sendShowsNotificationsTask = new Task(
+            sendShowsNotificationsTask = new Task(
                 () =>
                 {
                     while (true)
@@ -226,7 +229,7 @@ namespace HousewifeBot
 
         private static void StartSendEpisodesNotificationsTask(Notifier notifier)
         {
-            var sendEpisodesNotificationsTask = new Task(
+            sendEpisodesNotificationsTask = new Task(
                 () =>
                 {
                     while (true)
@@ -241,7 +244,7 @@ namespace HousewifeBot
 
         private static void StartUpdateNotificationsTask(Notifier notifier)
         {
-            var updateNotificationsTask = new Task(
+            updateNotificationsTask = new Task(
                 () =>
                 {
                     while (true)

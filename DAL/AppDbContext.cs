@@ -28,10 +28,10 @@ namespace DAL
             return Users.FirstOrDefault(e => e.TelegramUserId == telegramId);
         }
 
-        public Show GetShowByTitle(SiteType site, string title)
+        public Show GetShowByTitle(int siteTypeId, string title)
         {
             title = title.ToLower();
-            return Shows.FirstOrDefault(s => s.SiteTypeId == site.Id && 
+            return Shows.FirstOrDefault(s => s.SiteTypeId == siteTypeId && 
                 (s.Title.ToLower() == title || s.OriginalTitle.ToLower() == title || s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title));
         }
 

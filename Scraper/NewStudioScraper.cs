@@ -121,12 +121,32 @@ namespace Scraper
 
         private static int GetSeasonNumber(HtmlNode node)
         {
-            return int.Parse(SeasonNumberRegex.Match(node.InnerText).Groups[1].Value);
+            int seasonNumber = 0;
+            try
+            {
+                seasonNumber = int.Parse(SeasonNumberRegex.Match(node.InnerText).Groups[1].Value);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return seasonNumber;
         }
 
         private static int GetEpisodeNumber(HtmlNode node)
         {
-            return EpisodeNumberRegex.IsMatch(node.InnerText) ? int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[2].Value) : 0;
+            int episodeNumber = 0;
+            try
+            {
+                episodeNumber = EpisodeNumberRegex.IsMatch(node.InnerText) ? int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[2].Value) : 0;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return episodeNumber;
         }
 
         private Episode CreateEpisode(HtmlNode node, string detailsUrl, HtmlNode dateNode)

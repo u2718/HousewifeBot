@@ -45,8 +45,11 @@ namespace Scraper
                     if (showDictionary.ContainsKey(show.Key))
                     {
                         // Remove duplicates from series list
-                        var seriesList = show.Value.Episodes.Except(showDictionary[show.Key].Episodes);
-                        showDictionary[show.Key].Episodes.AddRange(seriesList);
+                        var episodes = show.Value.Episodes.Except(showDictionary[show.Key].Episodes);
+                        foreach (var episode in episodes)
+                        {
+                            showDictionary[show.Key].Episodes.Add(episode);
+                        }
                     }
                     else
                     {
