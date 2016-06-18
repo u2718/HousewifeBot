@@ -31,10 +31,8 @@ namespace DAL
         public Show GetShowByTitle(SiteType site, string title)
         {
             title = title.ToLower();
-            return SiteTypes.First(st => st.Id == site.Id)
-                .Shows.FirstOrDefault(s => s.Title.ToLower() == title ||
-                                      s.OriginalTitle.ToLower() == title ||
-                                      s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title);
+            return Shows.FirstOrDefault(s => s.SiteTypeId == site.Id && 
+                (s.Title.ToLower() == title || s.OriginalTitle.ToLower() == title || s.Title.ToLower() + " (" + s.OriginalTitle + ")" == title));
         }
 
         public List<Show> GetShowsByTitle(string title)
@@ -47,7 +45,7 @@ namespace DAL
 
         public Show GetShowById(int id)
         {
-            return Shows.FirstOrDefault(s => s.Id == id);
+            return Shows.Find(id);
         }
 
         public List<Show> GetShowsFuzzy(string paramTitle)
@@ -102,7 +100,7 @@ namespace DAL
 
         public Notification GetNotificationById(int notificationId)
         {
-            return Notifications.FirstOrDefault(n => n.Id == notificationId);
+            return Notifications.Find(notificationId);
         }
 
         public SiteType GetSiteTypeByName(string siteTypeName)

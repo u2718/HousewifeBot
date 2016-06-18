@@ -16,7 +16,7 @@ namespace Scraper
         private static readonly Dictionary<string, int> LastStoredEpisodesId = new Dictionary<string, int>() { { "lostfilm", 14468 }, { "newstudio", 19131 } };
 
         private static int updateInterval;
-                    
+
         public static void Main()
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
@@ -34,9 +34,11 @@ namespace Scraper
             var tasks = new List<Task>(scrapers.Count);
             foreach (var scraper in scrapers)
             {
-                var task = new Task(() => LoadShows(scraper));
-                tasks.Add(task);
-                task.Start();
+                var updateShowsTask = new Task(() => UpdateShows(scraper));
+                var updateEpisodesTask = new Task(() => UpdateEpisodes(scraper));
+                tasks.Add(updateShowsTask);
+                tasks.Add(updateEpisodesTask);
+                updateShowsTask.Start();
             }
 
             Task.WaitAll(tasks.ToArray());
@@ -58,9 +60,8 @@ namespace Scraper
             return result;
         }
 
-        private static void LoadShows(Scraper scraper)
+        private static void UpdateEpisodes(Scraper scraper)
         {
-            UpdateShows(scraper);
             while (true)
             {
                 List<Show> shows;
@@ -105,36 +106,41 @@ namespace Scraper
 
         private static void UpdateShows(Scraper scraper)
         {
-            using (var db = new AppDbContext())
+            while (true)
             {
-                List<Show> showsList;
-                Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
-                try
+                using (var db = new AppDbContext())
                 {
-                    showsList = scraper.LoadShows().Result;
-                }
-                catch (Exception e)
-                {
-                    Logger.Error(e, $"An error occurred while retrieving shows from {scraper.SiteTitle}");
-                    return;
+                    List<Show> showsList;
+                    Logger.Debug($"Retrieving shows from {scraper.SiteTitle}");
+                    try
+                    {
+                        showsList = scraper.LoadShows().Result;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, $"An error occurred while retrieving shows from {scraper.SiteTitle}");
+                        return;
+                    }
+
+                    foreach (var show in showsList)
+                    {
+                        var dbShow = db.SiteTypes.First(st => st.Id == scraper.ShowsSiteType.Id).Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
+                        if (dbShow != null)
+                        {
+                            dbShow.OriginalTitle = show.OriginalTitle;
+                            dbShow.Description = show.Description ?? dbShow.Description;
+                            dbShow.SiteId = show.SiteId;
+                        }
+                        else
+                        {
+                            db.Shows.Add(show);
+                        }
+                    }
+
+                    db.SaveChanges();
                 }
 
-                foreach (var show in showsList)
-                {
-                    var dbShow = db.SiteTypes.First(st => st.Id == scraper.ShowsSiteType.Id).Shows.FirstOrDefault(s => s.SiteId == show.SiteId);
-                    if (dbShow != null)
-                    {
-                        dbShow.OriginalTitle = show.OriginalTitle;
-                        dbShow.Description = show.Description ?? dbShow.Description;
-                        dbShow.SiteId = show.SiteId;
-                    }
-                    else
-                    {
-                        db.Shows.Add(show);
-                    }
-                }
-
-                db.SaveChanges();
+                Thread.Sleep(TimeSpan.FromMinutes(updateInterval));
             }
         }
 

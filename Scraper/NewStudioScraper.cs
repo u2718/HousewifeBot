@@ -92,7 +92,7 @@ namespace Scraper
 
                 if (!showDictionary.ContainsKey(showTitle))
                 {
-                    showDictionary.Add(showTitle, new Show { Title = showTitle, SiteType = ShowsSiteType });
+                    showDictionary.Add(showTitle, new Show { Title = showTitle, SiteTypeId = ShowsSiteType.Id });
                 }
 
                 showDictionary[showTitle].Episodes.Add(episode);
