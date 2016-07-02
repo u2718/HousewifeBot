@@ -17,6 +17,7 @@ namespace Scraper
         private static readonly Regex EpisodeNumberRegex = new Regex(@".+?\(Сезон\s*(\d+),\s* Серия\s*(\d+)\)");
         private static readonly Regex SeasonNumberRegex = new Regex(@"Сезон\s*(\d+)");
         private static readonly Regex IdRegex = new Regex(@"f=(\d+)");
+        private static readonly Regex TitleRegex = new Regex(@"(.+)\(.+\)\s*\/");
         private static readonly Regex OriginalTitleRegex = new Regex(@"\/(.+)\(\d{4}\)");
         private static readonly Regex EpisodeSiteIdRegex = new Regex(@"\?t=(\d+)");
         private static readonly Regex EpisodeRussianTitleRegex = new Regex(@"Русскоязычное название:\s*</span>\s*(.+?)<span");
@@ -116,7 +117,7 @@ namespace Scraper
 
         private static string GetShowTitle(HtmlNode currentNode)
         {
-            return WebUtility.HtmlDecode(OriginalTitleRegex.Match(currentNode.InnerText).Groups[1].Value.Trim());
+            return WebUtility.HtmlDecode(TitleRegex.Match(currentNode.InnerText).Groups[1].Value).Trim();
         }
 
         private static int GetSeasonNumber(HtmlNode node)
@@ -188,7 +189,7 @@ namespace Scraper
             }
 
             var node = doc.DocumentNode.SelectSingleNode(@"//div[@class='topic-list']/a/b");
-            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim());
+            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value).Trim();
         }
 
         private string GetEpisodeTitle(string url)
