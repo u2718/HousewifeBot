@@ -24,6 +24,7 @@ namespace Scraper
         private static readonly Regex EpisodeTitleRegex = new Regex(@"Название серии:\s*</span>\s*(.+?)<span");
         private static readonly Regex SeasonTitleRegex = new Regex(@"Сезон:\s*</span>\s*(.+?)<span");
         private static readonly Regex EpisodeDateRegex = new Regex(@"(\d{2}-.+?-\d{2}).+?(\d{2}:\d{2})");
+        private static readonly Regex DescriptionTitleRegex = new Regex("О фильме:\\s*</span><span class=\"post-br\"><br></span>\\s*(.+?)<span");
         private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
 
         public NewStudioScraper(long lastStoredEpisodeId) : base(lastStoredEpisodeId)
@@ -55,7 +56,8 @@ namespace Scraper
                 foreach (var show in shows)
                 {
                     var dbShow = db.Shows.FirstOrDefault(s => s.Title == show.Title);
-                    show.OriginalTitle = dbShow?.OriginalTitle ?? await GetOriginalTitle(show.SiteId);
+                    show.OriginalTitle = dbShow?.OriginalTitle ?? GetOriginalTitle(show.SiteId);
+                    show.Description = dbShow?.Description ?? GetDescription(show.SiteId);
                 }
             }
 
@@ -176,35 +178,34 @@ namespace Scraper
             return episode;
         }
 
-        private async Task<string> GetOriginalTitle(int showId)
+        private string GetOriginalTitle(int showId)
         {
-            HtmlDocument doc;
-            try
-            {
-                doc = await DownloadDocument(string.Format(ShowPageUrl, showId));
-            }
-            catch (WebException)
+            var node = DownloadNode(string.Format(ShowPageUrl, showId), @"//div[@class='topic-list']/a/b");
+            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value).Trim();
+        }
+
+        private string GetDescription(int showId)
+        {
+            var node = DownloadNode(string.Format(ShowPageUrl, showId), @"//div[@class='topic-list']/a");
+            if (node == null)
             {
                 return string.Empty;
             }
 
-            var node = doc.DocumentNode.SelectSingleNode(@"//div[@class='topic-list']/a/b");
-            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value).Trim();
+            var detailsUrl = SiteUrl + node.GetAttributeValue("href", string.Empty);
+            node = DownloadNode(detailsUrl, @"//div[@class='post_wrap']");
+            return node == null ? string.Empty : WebUtility.HtmlDecode(DescriptionTitleRegex.Match(node.InnerHtml).Groups[1].Value).Trim();
         }
 
         private string GetEpisodeTitle(string url)
         {
-            HtmlDocument doc;
-            try
-            {
-                doc = DownloadDocument(url).Result;
-            }
-            catch (WebException)
+            var node = DownloadNode(url, "//div[@class='post_wrap']");
+            if (node == null)
             {
                 return string.Empty;
             }
 
-            var details = doc.DocumentNode.SelectSingleNode("//div[@class='post_wrap']").InnerHtml;
+            var details = node.InnerHtml;
             string title;
             if (EpisodeRussianTitleRegex.IsMatch(details))
             {
@@ -224,6 +225,21 @@ namespace Scraper
             }
 
             return WebUtility.HtmlDecode(title);
+        }
+
+        private HtmlNode DownloadNode(string url, string xpath)
+        {
+            HtmlDocument doc;
+            try
+            {
+                doc = DownloadDocument(url).Result;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return doc.DocumentNode.SelectSingleNode(xpath);
         }
     }
 }
