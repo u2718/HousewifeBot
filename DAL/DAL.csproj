@@ -106,6 +106,18 @@
     <Compile Include="Migrations\201605281514168_AddEpisodeNumber.Designer.cs">
       <DependentUpon>201605281514168_AddEpisodeNumber.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201606180949567_AddSubscriptionsNavigationProperties.cs" />
+    <Compile Include="Migrations\201606180949567_AddSubscriptionsNavigationProperties.Designer.cs">
+      <DependentUpon>201606180949567_AddSubscriptionsNavigationProperties.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201606181012268_AddNotificationsNavigationProperties.cs" />
+    <Compile Include="Migrations\201606181012268_AddNotificationsNavigationProperties.Designer.cs">
+      <DependentUpon>201606181012268_AddNotificationsNavigationProperties.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201606181036137_AddShowNotificationsNavigationProperties.cs" />
+    <Compile Include="Migrations\201606181036137_AddShowNotificationsNavigationProperties.Designer.cs">
+      <DependentUpon>201606181036137_AddShowNotificationsNavigationProperties.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Notification.cs" />
     <Compile Include="Episode.cs" />
@@ -161,6 +173,15 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201605281514168_AddEpisodeNumber.resx">
       <DependentUpon>201605281514168_AddEpisodeNumber.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201606180949567_AddSubscriptionsNavigationProperties.resx">
+      <DependentUpon>201606180949567_AddSubscriptionsNavigationProperties.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201606181012268_AddNotificationsNavigationProperties.resx">
+      <DependentUpon>201606181012268_AddNotificationsNavigationProperties.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201606181036137_AddShowNotificationsNavigationProperties.resx">
+      <DependentUpon>201606181036137_AddShowNotificationsNavigationProperties.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

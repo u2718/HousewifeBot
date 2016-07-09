@@ -14,7 +14,7 @@ namespace TorrentDownloader
         static void Main(string[] args)
         {
             Logger.Info($"TorrentDownloader started: {Assembly.GetEntryAssembly().Location}");
-            ITorrentDownloader downloader = new QBittorrentDownloader();
+            ITorrentDownloader downloader = new TransmissionDownloader();
             int updateInterval;
             try
             {

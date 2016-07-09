@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using DAL;
 using NLog;
@@ -51,7 +52,7 @@ namespace HousewifeBot
                 Logger.Debug("SendShowsNotifications: Sending new notifications");
                 foreach (var notification in showNotifications)
                 {
-                    string text = $"{notification.Show.Title} ({notification.Show.SiteType.Title}) {string.Format(SubscribeCommand.SubscribeCommandFormat, notification.Show.Id)}\n{notification.Show.Description}";
+                    string text = $"{notification.Show.Title} ({notification.Show.SiteType.Title}) {string.Format(SubscribeCommand.SubscribeCommandFormat, notification.ShowId)}\n{notification.Show.Description}";
                     try
                     {
                         telegramApi.SendMessage(notification.User.TelegramUserId, text);
@@ -108,7 +109,7 @@ namespace HousewifeBot
                         var settings = db.GetSettingsByUser(userNotifications.Key);
                         if (settings != null)
                         {
-                            text = GetTorrents(notification, settings);
+                            text += GetTorrents(notification, settings);
                         }
                     }
 
@@ -136,11 +137,11 @@ namespace HousewifeBot
             using (AppDbContext db = new AppDbContext())
             {
                 Logger.Trace("UpdateNotifications: Retrieving new shows for users");
-                foreach (var user in db.Users)
+                foreach (var user in db.Users.ToList())
                 {
                     var shows = db.Shows
-                        .Where(s => s.DateCreated > user.DateCreated &&
-                                    !db.ShowNotifications.Any(n => n.User.Id == user.Id && n.Show.Id == s.Id))
+                        .Where(show => show.DateCreated > user.DateCreated).ToList()
+                        .Where(show => !db.ShowNotifications.Any(notification => notification.UserId == user.Id && notification.ShowId == show.Id))
                         .ToList();
                     if (shows.Count == 0)
                     {
@@ -171,18 +172,12 @@ namespace HousewifeBot
             using (AppDbContext db = new AppDbContext())
             {
                 Logger.Trace("UpdateNotifications: Retrieving new episodes for subscriptions");
-                foreach (Subscription subscription in db.Subscriptions)
+                foreach (Subscription subscription in db.Subscriptions.ToList())
                 {
-                    if (subscription.User == null || subscription.Show == null)
-                    {
-                        continue;
-                    }
-
-                    var notifications = db.Notifications.Where(n => n.Subscription.Id == subscription.Id);
                     var episodes = db.Episodes
-                        .Where(s => s.Show.Id == subscription.Show.Id && s.Date >= subscription.SubscriptionDate &&
-                                    !notifications.Any(n => n.Episode.Id == s.Id))
-                        .Select(s => s).ToList();
+                        .Where(episode =>
+                                episode.ShowId == subscription.ShowId && episode.Date >= subscription.SubscriptionDate &&
+                                episode.Notifications.Count == 0).ToList();
                     if (episodes.Count == 0)
                     {
                         continue;

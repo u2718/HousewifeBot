@@ -10,7 +10,10 @@ namespace DAL
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
+
         public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
+        public ICollection<ShowNotification> ShowNotifications { get; set; } = new List<ShowNotification>();
+
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public DateTimeOffset? DateCreated { get; set; }
         public override string ToString()

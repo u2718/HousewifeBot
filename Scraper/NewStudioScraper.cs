@@ -17,12 +17,14 @@ namespace Scraper
         private static readonly Regex EpisodeNumberRegex = new Regex(@".+?\(Сезон\s*(\d+),\s* Серия\s*(\d+)\)");
         private static readonly Regex SeasonNumberRegex = new Regex(@"Сезон\s*(\d+)");
         private static readonly Regex IdRegex = new Regex(@"f=(\d+)");
+        private static readonly Regex TitleRegex = new Regex(@"(.+)\(.+\)\s*\/");
         private static readonly Regex OriginalTitleRegex = new Regex(@"\/(.+)\(\d{4}\)");
         private static readonly Regex EpisodeSiteIdRegex = new Regex(@"\?t=(\d+)");
         private static readonly Regex EpisodeRussianTitleRegex = new Regex(@"Русскоязычное название:\s*</span>\s*(.+?)<span");
         private static readonly Regex EpisodeTitleRegex = new Regex(@"Название серии:\s*</span>\s*(.+?)<span");
         private static readonly Regex SeasonTitleRegex = new Regex(@"Сезон:\s*</span>\s*(.+?)<span");
         private static readonly Regex EpisodeDateRegex = new Regex(@"(\d{2}-.+?-\d{2}).+?(\d{2}:\d{2})");
+        private static readonly Regex DescriptionTitleRegex = new Regex("О фильме:\\s*</span><span class=\"post-br\"><br></span>\\s*(.+?)<span");
         private static readonly TimeZoneInfo SiteTimeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
 
         public NewStudioScraper(long lastStoredEpisodeId) : base(lastStoredEpisodeId)
@@ -54,7 +56,8 @@ namespace Scraper
                 foreach (var show in shows)
                 {
                     var dbShow = db.Shows.FirstOrDefault(s => s.Title == show.Title);
-                    show.OriginalTitle = dbShow?.OriginalTitle ?? await GetOriginalTitle(show.SiteId);
+                    show.OriginalTitle = dbShow?.OriginalTitle ?? GetOriginalTitle(show.SiteId);
+                    show.Description = dbShow?.Description ?? GetDescription(show.SiteId);
                 }
             }
 
@@ -92,7 +95,7 @@ namespace Scraper
 
                 if (!showDictionary.ContainsKey(showTitle))
                 {
-                    showDictionary.Add(showTitle, new Show { Title = showTitle, SiteType = ShowsSiteType });
+                    showDictionary.Add(showTitle, new Show { Title = showTitle, SiteTypeId = ShowsSiteType.Id });
                 }
 
                 showDictionary[showTitle].Episodes.Add(episode);
@@ -116,17 +119,37 @@ namespace Scraper
 
         private static string GetShowTitle(HtmlNode currentNode)
         {
-            return WebUtility.HtmlDecode(OriginalTitleRegex.Match(currentNode.InnerText).Groups[1].Value.Trim());
+            return WebUtility.HtmlDecode(TitleRegex.Match(currentNode.InnerText).Groups[1].Value).Trim();
         }
 
         private static int GetSeasonNumber(HtmlNode node)
         {
-            return int.Parse(SeasonNumberRegex.Match(node.InnerText).Groups[1].Value);
+            int seasonNumber = 0;
+            try
+            {
+                seasonNumber = int.Parse(SeasonNumberRegex.Match(node.InnerText).Groups[1].Value);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return seasonNumber;
         }
 
         private static int GetEpisodeNumber(HtmlNode node)
         {
-            return EpisodeNumberRegex.IsMatch(node.InnerText) ? int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[2].Value) : 0;
+            int episodeNumber = 0;
+            try
+            {
+                episodeNumber = EpisodeNumberRegex.IsMatch(node.InnerText) ? int.Parse(EpisodeNumberRegex.Match(node.InnerText).Groups[2].Value) : 0;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return episodeNumber;
         }
 
         private Episode CreateEpisode(HtmlNode node, string detailsUrl, HtmlNode dateNode)
@@ -155,35 +178,34 @@ namespace Scraper
             return episode;
         }
 
-        private async Task<string> GetOriginalTitle(int showId)
+        private string GetOriginalTitle(int showId)
         {
-            HtmlDocument doc;
-            try
-            {
-                doc = await DownloadDocument(string.Format(ShowPageUrl, showId));
-            }
-            catch (WebException)
+            var node = DownloadNode(string.Format(ShowPageUrl, showId), @"//div[@class='topic-list']/a/b");
+            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value).Trim();
+        }
+
+        private string GetDescription(int showId)
+        {
+            var node = DownloadNode(string.Format(ShowPageUrl, showId), @"//div[@class='topic-list']/a");
+            if (node == null)
             {
                 return string.Empty;
             }
 
-            var node = doc.DocumentNode.SelectSingleNode(@"//div[@class='topic-list']/a/b");
-            return node == null ? string.Empty : WebUtility.HtmlDecode(OriginalTitleRegex.Match(node.InnerText).Groups[1].Value.Trim());
+            var detailsUrl = SiteUrl + node.GetAttributeValue("href", string.Empty);
+            node = DownloadNode(detailsUrl, @"//div[@class='post_wrap']");
+            return node == null ? string.Empty : WebUtility.HtmlDecode(DescriptionTitleRegex.Match(node.InnerHtml).Groups[1].Value).Trim();
         }
 
         private string GetEpisodeTitle(string url)
         {
-            HtmlDocument doc;
-            try
-            {
-                doc = DownloadDocument(url).Result;
-            }
-            catch (WebException)
+            var node = DownloadNode(url, "//div[@class='post_wrap']");
+            if (node == null)
             {
                 return string.Empty;
             }
 
-            var details = doc.DocumentNode.SelectSingleNode("//div[@class='post_wrap']").InnerHtml;
+            var details = node.InnerHtml;
             string title;
             if (EpisodeRussianTitleRegex.IsMatch(details))
             {
@@ -203,6 +225,21 @@ namespace Scraper
             }
 
             return WebUtility.HtmlDecode(title);
+        }
+
+        private HtmlNode DownloadNode(string url, string xpath)
+        {
+            HtmlDocument doc;
+            try
+            {
+                doc = DownloadDocument(url).Result;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            return doc.DocumentNode.SelectSingleNode(xpath);
         }
     }
 }

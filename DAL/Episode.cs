@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace DAL
 {
@@ -9,8 +10,10 @@ namespace DAL
         public int? SeasonNumber { get; set; }
         public int? EpisodeNumber { get; set; }
         public DateTimeOffset? Date { get; set; }
+        public int ShowId { get; set; }
 
         public virtual Show Show { set; get; }
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
         public override bool Equals(object obj)
         {

@@ -121,7 +121,7 @@ namespace Telegram
                     new Dictionary<string, string>(),
                     (dictionary, pair) =>
                     {
-                        dictionary.Add(pair.Key, pair.Value.ToString());
+                        dictionary.Add(pair.Key, pair.Value?.ToString() ?? string.Empty);
                         return dictionary;
                     }
                     ));

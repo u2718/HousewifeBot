@@ -16,7 +16,7 @@ namespace Scraper
         private static readonly Dictionary<string, int> LastStoredEpisodesId = new Dictionary<string, int>() { { "lostfilm", 14468 }, { "newstudio", 19131 } };
 
         private static int updateInterval;
-                    
+
         public static void Main()
         {
             Logger.Info($"Scraper started: {Assembly.GetEntryAssembly().Location}");
@@ -34,9 +34,9 @@ namespace Scraper
             var tasks = new List<Task>(scrapers.Count);
             foreach (var scraper in scrapers)
             {
-                var task = new Task(() => LoadShows(scraper));
-                tasks.Add(task);
-                task.Start();
+                var loadShowsTask = new Task(() => LoadShows(scraper));
+                tasks.Add(loadShowsTask);
+                loadShowsTask.Start();
             }
 
             Task.WaitAll(tasks.ToArray());
@@ -60,9 +60,9 @@ namespace Scraper
 
         private static void LoadShows(Scraper scraper)
         {
-            UpdateShows(scraper);
             while (true)
             {
+                UpdateShows(scraper);
                 List<Show> shows;
                 Logger.Trace($"Retrieving new episodes from {scraper.SiteTitle}");
                 try
@@ -86,10 +86,13 @@ namespace Scraper
             {
                 foreach (var show in shows)
                 {
-                    var dbShow = db.GetShowByTitle(show.SiteType, show.Title);
+                    var dbShow = db.GetShowByTitle(show.SiteTypeId, show.Title);
                     if (dbShow != null)
                     {
-                        dbShow.Episodes.AddRange(show.Episodes);
+                        foreach (var episode in show.Episodes)
+                        {
+                            dbShow.Episodes.Add(episode);
+                        }
                     }
                     else
                     {
